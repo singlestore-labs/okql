@@ -2,10 +2,14 @@ use std::sync::Arc;
 
 use miette::{NamedSource, Report};
 
+/// Miette Span Utilities
+mod spans;
 /// KQL Tokenizer/Lexer
 mod lexer;
 /// KQL Abstract Syntax Tree
 mod ast;
+/// KQL Parser
+mod parser;
 
 pub fn parse<SN: ToString, SC: ToString>(
     source_name: SN,

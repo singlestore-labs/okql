@@ -2,16 +2,9 @@ use std::sync::Arc;
 
 use logos::Logos;
 
-use miette::{Diagnostic, SourceSpan, NamedSource};
+use miette::{Diagnostic, NamedSource};
+use crate::spans::{M, Span};
 use thiserror::Error;
-
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct TokenData {
-    pub token: Token,
-    pub span: SourceSpan
-}
-
 
 #[derive(Error, Debug, Diagnostic)]
 #[error("The input did not match a token rule")]
@@ -20,23 +13,18 @@ pub struct LexerError {
     #[source_code]
     src: Arc<NamedSource>,
     #[label("This text was not recognized")]
-    span: SourceSpan,
+    span: Span,
 }
 
 /// Returns a token vector or collection of errors
-pub fn tokenize(src: Arc<NamedSource>, contents: String) -> Result<Vec<TokenData>, Vec<LexerError>> {
-    let tokens: Vec<TokenData> = Token::lexer(&contents)
+pub fn tokenize(src: Arc<NamedSource>, contents: String) -> Result<Vec<M<Token>>, Vec<LexerError>> {
+    let tokens: Vec<M<Token>> = Token::lexer(&contents)
         .spanned()
-        .map(|(token, span)| 
-            TokenData {
-                token,
-                span: SourceSpan::from(span)
-            }
-        )
+        .map(|(token, span)| M::new(token, Span::from(span)))
         .collect();
 
     let errors: Vec<LexerError> = tokens.iter()
-        .filter(|token_data| token_data.token == Token::Error)
+        .filter(|token_data| token_data.value == Token::Error)
         .map(|token_data|
             LexerError {
                 src: src.clone(),
@@ -370,18 +358,18 @@ mod test {
         let contents: String = "StormEvents | take 5 | extend Duration = EndTime - StartTime".into();
         let src = Arc::new(NamedSource::new(String::from("test"), contents.clone()));
         let output = vec![
-            ( SourceSpan::from(0 ..11), Token::Term(String::from("StormEvents")) ),
-            ( SourceSpan::from(12..13), Token::Pipe ),
-            ( SourceSpan::from(14..18), Token::Term(String::from("take")) ),
-            ( SourceSpan::from(19..20), Token::LongLiteral(5) ),
-            ( SourceSpan::from(21..22), Token::Pipe ),
-            ( SourceSpan::from(23..29), Token::Term(String::from("extend")) ),
-            ( SourceSpan::from(30..38), Token::Term(String::from("Duration")) ),
-            ( SourceSpan::from(39..40), Token::Assign ),
-            ( SourceSpan::from(41..48), Token::Term(String::from("EndTime")) ),
-            ( SourceSpan::from(49..50), Token::Sub ),
-            ( SourceSpan::from(51..60), Token::Term(String::from("StartTime")) ),
-        ].into_iter().map(to_token_data).collect::<Vec<TokenData>>();
+            ( Span::from(0 ..11), Token::Term(String::from("StormEvents")) ),
+            ( Span::from(12..13), Token::Pipe ),
+            ( Span::from(14..18), Token::Term(String::from("take")) ),
+            ( Span::from(19..20), Token::LongLiteral(5) ),
+            ( Span::from(21..22), Token::Pipe ),
+            ( Span::from(23..29), Token::Term(String::from("extend")) ),
+            ( Span::from(30..38), Token::Term(String::from("Duration")) ),
+            ( Span::from(39..40), Token::Assign ),
+            ( Span::from(41..48), Token::Term(String::from("EndTime")) ),
+            ( Span::from(49..50), Token::Sub ),
+            ( Span::from(51..60), Token::Term(String::from("StartTime")) ),
+        ].into_iter().map(to_token_data).collect::<Vec<M<Token>>>();
 
         match tokenize(src, contents) {
             Ok(tokens) => assert_eq!(output, tokens),
@@ -396,12 +384,12 @@ mod test {
     //     let ident_a = Token::Identifier(String::from("a"));
     //     let string_asdf = Token::StringLiteral(String::from(r#"asdf""#));
     //     let output = vec![
-    //         ( Token::Let,       SourceSpan::from(0..3) ),
-    //         ( ident_a,          SourceSpan::from(4..5) ),
-    //         ( Token::Assign,    SourceSpan::from(6..7) ),
-    //         ( string_asdf,      SourceSpan::from(8..16) ),
-    //         ( Token::Semicolon, SourceSpan::from(16..17) )
-    //     ].into_iter().map(to_token_data).collect::<Vec<TokenData>>();
+    //         ( Token::Let,       Span::from(0..3) ),
+    //         ( ident_a,          Span::from(4..5) ),
+    //         ( Token::Assign,    Span::from(6..7) ),
+    //         ( string_asdf,      Span::from(8..16) ),
+    //         ( Token::Semicolon, Span::from(16..17) )
+    //     ].into_iter().map(to_token_data).collect::<Vec<M<Token>>>();
 
     //     match tokenize(src, contents) {
     //         Ok(tokens) => assert_eq!(output, tokens),
@@ -409,10 +397,7 @@ mod test {
     //     }
     // }
 
-    fn to_token_data(d: (SourceSpan, Token)) -> TokenData {
-        TokenData {
-            token: d.1,
-            span: d.0
-        }
+    fn to_token_data(d: (Span, Token)) -> M<Token> {
+        M::new(d.1, d.0)
     }
 }

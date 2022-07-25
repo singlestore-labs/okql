@@ -1,13 +1,21 @@
-use super::{M, MBox, Span, expression::Expression};
+use crate::spans::{M, MBox, Span};
+use crate::ast::expression::Expression;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Query {
     /// The base table value to start with.
     pub table: M<String>,
     /// The tabular operators to apply to it.
+    /// The first field is the name used, which may differ from the operator name.
+    /// (e.g. name may be "take" for operator "limit")
     pub operators: Vec<(M<String>, TabularOperator)>
 }
 
+/// The logically distinct operators (aliases are not included).
+/// 
+/// Aliases:
+/// * order -> sort
+/// * take -> limit
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum TabularOperator {
     Count,

@@ -1,4 +1,4 @@
-use super::{M, MBox, Span};
+use crate::spans::{M, MBox, Span};
 
 /// Represents scalar, aggregate, and group expressions
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
