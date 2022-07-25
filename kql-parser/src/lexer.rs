@@ -68,6 +68,10 @@ pub enum Token {
     #[regex(r"![_a-zA-Z][_a-zA-Z0-9]*", |lex| String::from(&lex.slice()[1..]))]
     BangTerm(String),
 
+    /// Terms that begin with "!" (e.g. $left, $right)
+    #[regex(r"\$[_a-zA-Z][_a-zA-Z0-9]*", |lex| String::from(&lex.slice()[1..]))]
+    DollarTerm(String),
+
     /// `bool` literal
     #[token("true", |_| true)]
     #[token("false", |_| false)]
