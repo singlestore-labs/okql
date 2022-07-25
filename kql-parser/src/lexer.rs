@@ -77,7 +77,7 @@ pub enum Token {
     // Intentionally Omitting guid type
 
     /// `int` literal
-    #[regex("int(-?[0-9]+)", |lex| parse_int_dec_literal(lex.slice(), 4, 1))]
+    #[regex(r"int\(-?[0-9]+\)", |lex| parse_int_dec_literal(lex.slice(), 4, 1))]
     #[regex(r"int\(0x[0-9a-fA-F][0-9a-fA-F]*\)", |lex| parse_int_hex_literal(lex.slice(), 4, 1))]
     IntLiteral(i32),
 
@@ -85,23 +85,23 @@ pub enum Token {
     IntNullLiteral,
 
     /// `long` literal
-    #[regex("-?[0-9]+", |lex| parse_long_dec_literal(lex.slice(), 0, 0))]
+    #[regex(r"-?[0-9]+", |lex| parse_long_dec_literal(lex.slice(), 0, 0))]
     #[regex(r"0x[0-9a-fA-F][0-9a-fA-F]*", |lex| parse_long_hex_literal(lex.slice(), 0, 0))]
-    #[regex("long(-?[0-9]+)", |lex| parse_long_dec_literal(lex.slice(), 5, 1))]
+    #[regex(r"long\(-?[0-9]+\)", |lex| parse_long_dec_literal(lex.slice(), 5, 1))]
     #[regex(r"long\(0x[0-9a-fA-F][0-9a-fA-F]*\)", |lex| parse_long_hex_literal(lex.slice(), 5, 1))]
     LongLiteral(i64),
 
-    #[token("long(null)")]
+    #[token(r"long\(null\)")]
     LongNullLiteral,
 
     /// `real` literal
     #[regex(r"[0-9]+\.[0-9]+", |lex| lex.slice().parse())] // TODO: exp notation
-    #[token("real(nan)", |_| f64::NAN)]
-    #[token("real(+inf)", |_| f64::INFINITY)]
-    #[token("real(-inf)", |_| f64::NEG_INFINITY)]
+    #[token(r"real\(nan\)", |_| f64::NAN)]
+    #[token(r"real\(+inf\)", |_| f64::INFINITY)]
+    #[token(r"real\(-inf\)", |_| f64::NEG_INFINITY)]
     RealLiteral(f64),
 
-    #[token("real(null")]
+    #[token(r"real\(null\)")]
     RealNullLiteral,
 
     /// `string` literal
@@ -377,25 +377,22 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn tokenize_let() {
-    //     let contents: String = r#"let a = "asdf\"";"#.into();
-    //     let src = Arc::new(NamedSource::new(String::from("test"), contents.clone()));
-    //     let ident_a = Token::Identifier(String::from("a"));
-    //     let string_asdf = Token::StringLiteral(String::from(r#"asdf""#));
-    //     let output = vec![
-    //         ( Token::Let,       Span::from(0..3) ),
-    //         ( ident_a,          Span::from(4..5) ),
-    //         ( Token::Assign,    Span::from(6..7) ),
-    //         ( string_asdf,      Span::from(8..16) ),
-    //         ( Token::Semicolon, Span::from(16..17) )
-    //     ].into_iter().map(to_token_data).collect::<Vec<M<Token>>>();
+    #[test]
+    fn tokenize_literals() {
+        let contents: String = r"int(132)foobar int(null)|".into();
+        let src = Arc::new(NamedSource::new(String::from("test"), contents.clone()));
+        let output = vec![
+            ( Span::from(0 ..8), Token::IntLiteral(132) ),
+            ( Span::from(8 ..14), Token::Term(String::from("foobar")) ),
+            ( Span::from(15..24), Token::IntNullLiteral ),
+            ( Span::from(24..25), Token::Pipe ),
+        ].into_iter().map(to_token_data).collect::<Vec<M<Token>>>();
 
-    //     match tokenize(src, contents) {
-    //         Ok(tokens) => assert_eq!(output, tokens),
-    //         Err(_) => panic!("Should not have failed")
-    //     }
-    // }
+        match tokenize(src, contents) {
+            Ok(tokens) => assert_eq!(output, tokens),
+            Err(_) => panic!("Should not have failed")
+        }
+    }
 
     fn to_token_data(d: (Span, Token)) -> M<Token> {
         M::new(d.1, d.0)

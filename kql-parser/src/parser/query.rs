@@ -6,6 +6,7 @@ use crate::ast::query::{Query, TabularOperator};
 
 use crate::parser::{
     ParserError, ParseInput,
+    parse_term
     // statements::parse_block,
     // types::parse_valtype,
     // expressions::parse_expression
@@ -19,14 +20,6 @@ pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
         table,
         operators
     })
-}
-
-fn parse_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
-    let token = input.next()?;
-    match token.value.clone() {
-        Token::Term(s) => Ok(M::new(s, token.span.clone())),
-        _ => Err(input.unexpected_token("Term expected"))
-    }
 }
 
 fn parse_operators(input: &mut ParseInput) -> Result<Vec<(M<String>, TabularOperator)>, ParserError> {
@@ -86,11 +79,23 @@ fn parse_kebab_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
 }
 
 fn parse_distinct(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("distinct operator"))
+    Ok(TabularOperator::Distinct { columns: parse_columns(input)? })
 }
 
 fn parse_columns(input: &mut ParseInput) -> Result<ast::query::Columns, ParserError> {
-    Err(input.unsupported_error("columns operator"))
+    let star_span = input.next_if(Token::Star);
+    if let Some(span) = star_span {
+        return Ok(ast::query::Columns::Wildcard(span))
+    }
+
+    let first_name = parse_term(input)?;
+    let mut columns = vec![first_name];
+
+    while input.next_if(Token::Comma).is_some() {
+        columns.push(parse_term(input)?);
+    }
+
+    Ok(ast::query::Columns::Explicit(columns))
 }
 
 fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {

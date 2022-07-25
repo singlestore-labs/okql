@@ -1,7 +1,7 @@
 use crate::spans::{M, MBox, Span};
 use crate::ast::expression::Expression;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Query {
     /// The base table value to start with.
     pub table: M<String>,
@@ -16,7 +16,7 @@ pub struct Query {
 /// Aliases:
 /// * order -> sort
 /// * take -> limit
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TabularOperator {
     Count,
     Distinct {
@@ -76,18 +76,18 @@ pub enum TabularOperator {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Columns {
     Explicit(Vec<M<String>>),
-    Wildcard
+    Wildcard(Span)
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct JoinParams {
     kind: Option<JoinKind>
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum JoinKind {
     /// Inner join with left side deduplication
     /// Name "innerunique"
@@ -137,12 +137,12 @@ impl JoinKind {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum JoinReturnColumns {
     Left, Right, Both
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum JoinAttribute {
     Matching {
         name: M<String>
@@ -155,19 +155,19 @@ pub enum JoinAttribute {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ColumnDefinition {
     column: M<String>,
     expr: Option<MBox<Expression>>
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SortOrder {
     Ascending,
     Descending
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum NullsPosition {
     First,
     Last

@@ -170,3 +170,30 @@ impl ParseInput {
         }
     }
 }
+
+fn parse_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
+    let token = input.next()?;
+    match token.value.clone() {
+        Token::Term(s) => Ok(M::new(s, token.span.clone())),
+        _ => Err(input.unexpected_token("Term expected"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    
+    use std::sync::Arc;
+    use miette::NamedSource;
+
+    use crate::{
+        lexer::tokenize,
+        spans::Span,
+        parser::ParseInput
+    };
+
+    pub fn make_input(source: &str) -> ParseInput {
+        let src = Arc::new(NamedSource::new("test", source.to_string()));
+        let tokens = tokenize(src.clone(), source.to_string()).unwrap();
+        ParseInput::new(src, tokens)
+    }
+}
