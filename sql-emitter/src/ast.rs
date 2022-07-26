@@ -7,6 +7,28 @@ pub struct SelectStatement {
     pub order_by: Option<OrderByClause>
 }
 
+impl SelectStatement {
+    pub fn simple(table: String) -> Self {
+        SelectStatement {
+            modifier: None,
+            select: SelectList::Wildcard,
+            from: TableReference::TableName { name: table },
+            where_: None,
+            order_by: None
+        }
+    }
+
+    pub fn simple_wrapping(other: Self) -> Self {
+        SelectStatement {
+            modifier: None,
+            select: SelectList::Wildcard,
+            from: TableReference::InnerStatement { value: Box::new(other) },
+            where_: None,
+            order_by: None
+        }
+    }
+}
+
 pub enum Modifier {
     All,
     Distinct
@@ -14,9 +36,14 @@ pub enum Modifier {
 
 pub enum SelectList {
     Explicit {
-        fields: Vec<String>
+        fields: Vec<SelectColumn>
     },
     Wildcard
+}
+
+pub struct SelectColumn {
+    pub value: Box<ValueExpression>,
+    pub alias: Option<String>
 }
 
 pub enum TableReference {
@@ -50,6 +77,9 @@ pub enum ComparisonOperator {
 }
 
 pub enum ValueExpression {
+    Column {
+        name: String
+    },
     FuncCall {
         name: String,
         args: Vec<ValueExpression>

@@ -51,16 +51,26 @@ impl Printer {
 
     fn print_select(&mut self, modifier: &Option<ast::Modifier>, select: &ast::SelectList) -> FResult {
         self.start_line();
-        let columns = match select {
-            ast::SelectList::Explicit { fields } => {
-                fields.join(", ")
-            },
-            ast::SelectList::Wildcard => String::from("*")
-        };
         match modifier {
-            Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT {}", columns)?,
-            Some(ast::Modifier::All) => write!(self.output, "SELECT ALL {}", columns)?,
-            None => write!(self.output, "SELECT {}", columns)?
+            Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT ")?,
+            Some(ast::Modifier::All) => write!(self.output, "SELECT ALL ")?,
+            None => write!(self.output, "SELECT ")?
+        };
+        match select {
+            ast::SelectList::Explicit { fields } => {
+                let mut first = true;
+                for field in fields {
+                    if !first {
+                        write!(self.output, ", ")?;
+                    }
+                    self.print_val_expr(&field.value)?;
+                    if let Some(alias) = &field.alias {
+                        write!(self.output, " as {}", alias)?;
+                    }
+                    first = false;
+                }
+            },
+            ast::SelectList::Wildcard => write!(self.output, "*")?
         };
         self.end_line();
         Ok(())
@@ -98,6 +108,10 @@ impl Printer {
     }
 
     fn print_order_by(&mut self, cond: &ast::OrderByClause) -> FResult {
+        todo!()
+    }
+
+    fn print_val_expr(&mut self, expr: &ast::ValueExpression) -> FResult {
         todo!()
     }
 }

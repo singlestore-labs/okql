@@ -159,8 +159,8 @@ pub enum JoinAttribute {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ColumnDefinition {
-    column: M<String>,
-    expr: Option<MBox<Expression>>,
+    pub column: M<String>,
+    pub expr: Option<MBox<Expression>>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
