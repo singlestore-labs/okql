@@ -6,7 +6,7 @@ pub type Span = SourceSpan;
 #[derive(Debug, PartialEq, Clone)]
 pub struct M<T> {
     pub span: Span,
-    pub value: T
+    pub value: T,
 }
 
 impl<T> M<T> {
@@ -17,7 +17,7 @@ impl<T> M<T> {
     pub fn new_range(value: T, left: Span, right: Span) -> Self {
         M {
             span: join_spans(left, right),
-            value
+            value,
         }
     }
 }
@@ -26,18 +26,21 @@ impl<T> M<T> {
 #[derive(Debug, PartialEq, Clone)]
 pub struct MBox<T> {
     pub span: Span,
-    pub value: Box<T>
+    pub value: Box<T>,
 }
 
 impl<T> MBox<T> {
     pub fn new(value: T, span: Span) -> Self {
-        MBox { span, value: Box::new(value) }
+        MBox {
+            span,
+            value: Box::new(value),
+        }
     }
 
     pub fn new_range(value: T, left: Span, right: Span) -> Self {
         MBox {
             span: join_spans(left, right),
-            value: Box::new(value)
+            value: Box::new(value),
         }
     }
 }

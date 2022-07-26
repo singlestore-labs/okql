@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use logos::Logos;
 
+use crate::spans::{Span, M};
 use miette::{Diagnostic, NamedSource};
-use crate::spans::{M, Span};
 use thiserror::Error;
 
 #[derive(Error, Debug, Diagnostic)]
@@ -23,14 +23,13 @@ pub fn tokenize(src: Arc<NamedSource>, contents: String) -> Result<Vec<M<Token>>
         .map(|(token, span)| M::new(token, Span::from(span)))
         .collect();
 
-    let errors: Vec<LexerError> = tokens.iter()
+    let errors: Vec<LexerError> = tokens
+        .iter()
         .filter(|token_data| token_data.value == Token::Error)
-        .map(|token_data|
-            LexerError {
-                src: src.clone(),
-                span: token_data.span.clone()
-            }
-        )
+        .map(|token_data| LexerError {
+            src: src.clone(),
+            span: token_data.span.clone(),
+        })
         .collect();
 
     if errors.is_empty() {
@@ -75,7 +74,6 @@ pub enum Token {
     // TODO dynamic: https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/scalar-data-types/dynamic
 
     // Intentionally Omitting guid type
-
     /// `int` literal
     #[regex(r"int\(-?[0-9]+\)", |lex| parse_int_dec_literal(lex.slice(), 4, 1))]
     #[regex(r"int\(0x[0-9a-fA-F][0-9a-fA-F]*\)", |lex| parse_int_hex_literal(lex.slice(), 4, 1))]
@@ -115,7 +113,6 @@ pub enum Token {
     // TODO timespan: https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/scalar-data-types/timespan
 
     // Symbols -----------------------------------------
-
     /// Pipe Symbol "|"
     #[token("|")]
     Pipe,
@@ -206,7 +203,7 @@ pub enum Token {
 
     // Not Equals Operator "!="
     #[token("!=")]
-    NEQ
+    NEQ,
 }
 
 /// Parses a string according to the JSON string format in ECMA-404.
@@ -249,16 +246,19 @@ fn parse_escaped_char<'src>(lex: &mut std::str::Chars<'src>) -> Option<(char, us
         '\"' => ('\"', 1),
         '\'' => ('\'', 1),
         '\\' => ('\\', 1),
-        'n'  => ('\n', 1),
-        'r'  => ('\r', 1),
-        't'  => ('\t', 1),
+        'n' => ('\n', 1),
+        'r' => ('\r', 1),
+        't' => ('\t', 1),
         _ => return None,
     };
 
     Some(res)
 }
 
-fn parse_verbatim_string_literal<'src>(init: char, lex: &mut logos::Lexer<'src, Token>) -> Option<String> {
+fn parse_verbatim_string_literal<'src>(
+    init: char,
+    lex: &mut logos::Lexer<'src, Token>,
+) -> Option<String> {
     let mut c_iter = lex.remainder().chars();
     let mut buf = String::new();
 
@@ -317,7 +317,7 @@ fn parse_multiline_string_literal<'src>(lex: &mut logos::Lexer<'src, Token>) -> 
 }
 
 fn parse_int_dec_literal(s: &str, trim_front: usize, trim_back: usize) -> Option<i32> {
-    let s = &s[trim_front.. s.len()-trim_back];
+    let s = &s[trim_front..s.len() - trim_back];
 
     if s.starts_with("-") {
         (&s[1..]).parse::<i32>().ok().map(|n| -n)
@@ -327,7 +327,7 @@ fn parse_int_dec_literal(s: &str, trim_front: usize, trim_back: usize) -> Option
 }
 
 fn parse_long_dec_literal(s: &str, trim_front: usize, trim_back: usize) -> Option<i64> {
-    let s = &s[trim_front.. s.len()-trim_back];
+    let s = &s[trim_front..s.len() - trim_back];
 
     if s.starts_with("-") {
         (&s[1..]).parse::<i64>().ok().map(|n| -n)
@@ -337,43 +337,47 @@ fn parse_long_dec_literal(s: &str, trim_front: usize, trim_back: usize) -> Optio
 }
 
 fn parse_int_hex_literal(s: &str, trim_front: usize, trim_back: usize) -> Option<i32> {
-    let s = &s[trim_front.. s.len()-trim_back];
+    let s = &s[trim_front..s.len() - trim_back];
 
     i32::from_str_radix(&s[2..], 16).ok()
 }
 
 fn parse_long_hex_literal(s: &str, trim_front: usize, trim_back: usize) -> Option<i64> {
-    let s = &s[trim_front.. s.len()-trim_back];
+    let s = &s[trim_front..s.len() - trim_back];
 
     i64::from_str_radix(&s[2..], 16).ok()
 }
 
 #[cfg(test)]
 mod test {
-    use pretty_assertions::assert_eq;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn tokenize_fn_declaration() {
-        let contents: String = "StormEvents | take 5 | extend Duration = EndTime - StartTime".into();
+        let contents: String =
+            "StormEvents | take 5 | extend Duration = EndTime - StartTime".into();
         let src = Arc::new(NamedSource::new(String::from("test"), contents.clone()));
         let output = vec![
-            ( Span::from(0 ..11), Token::Term(String::from("StormEvents")) ),
-            ( Span::from(12..13), Token::Pipe ),
-            ( Span::from(14..18), Token::Term(String::from("take")) ),
-            ( Span::from(19..20), Token::LongLiteral(5) ),
-            ( Span::from(21..22), Token::Pipe ),
-            ( Span::from(23..29), Token::Term(String::from("extend")) ),
-            ( Span::from(30..38), Token::Term(String::from("Duration")) ),
-            ( Span::from(39..40), Token::Assign ),
-            ( Span::from(41..48), Token::Term(String::from("EndTime")) ),
-            ( Span::from(49..50), Token::Sub ),
-            ( Span::from(51..60), Token::Term(String::from("StartTime")) ),
-        ].into_iter().map(to_token_data).collect::<Vec<M<Token>>>();
+            (Span::from(0..11), Token::Term(String::from("StormEvents"))),
+            (Span::from(12..13), Token::Pipe),
+            (Span::from(14..18), Token::Term(String::from("take"))),
+            (Span::from(19..20), Token::LongLiteral(5)),
+            (Span::from(21..22), Token::Pipe),
+            (Span::from(23..29), Token::Term(String::from("extend"))),
+            (Span::from(30..38), Token::Term(String::from("Duration"))),
+            (Span::from(39..40), Token::Assign),
+            (Span::from(41..48), Token::Term(String::from("EndTime"))),
+            (Span::from(49..50), Token::Sub),
+            (Span::from(51..60), Token::Term(String::from("StartTime"))),
+        ]
+        .into_iter()
+        .map(to_token_data)
+        .collect::<Vec<M<Token>>>();
 
         match tokenize(src, contents) {
             Ok(tokens) => assert_eq!(output, tokens),
-            Err(_) => panic!("Should not have failed")
+            Err(_) => panic!("Should not have failed"),
         }
     }
 
@@ -382,15 +386,18 @@ mod test {
         let contents: String = r"int(132)foobar int(null)|".into();
         let src = Arc::new(NamedSource::new(String::from("test"), contents.clone()));
         let output = vec![
-            ( Span::from(0 ..8), Token::IntLiteral(132) ),
-            ( Span::from(8 ..14), Token::Term(String::from("foobar")) ),
-            ( Span::from(15..24), Token::IntNullLiteral ),
-            ( Span::from(24..25), Token::Pipe ),
-        ].into_iter().map(to_token_data).collect::<Vec<M<Token>>>();
+            (Span::from(0..8), Token::IntLiteral(132)),
+            (Span::from(8..14), Token::Term(String::from("foobar"))),
+            (Span::from(15..24), Token::IntNullLiteral),
+            (Span::from(24..25), Token::Pipe),
+        ]
+        .into_iter()
+        .map(to_token_data)
+        .collect::<Vec<M<Token>>>();
 
         match tokenize(src, contents) {
             Ok(tokens) => assert_eq!(output, tokens),
-            Err(_) => panic!("Should not have failed")
+            Err(_) => panic!("Should not have failed"),
         }
     }
 

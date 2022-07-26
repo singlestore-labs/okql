@@ -1,25 +1,20 @@
-
-use crate::spans::{M, span_precedes_span, join_spans};
-use crate::lexer::Token;
 use crate::ast;
 use crate::ast::query::{Query, TabularOperator};
+use crate::lexer::Token;
+use crate::spans::{join_spans, span_precedes_span, M};
 
-use crate::parser::{
-    ParserError, ParseInput,
-    parse_term
-};
+use crate::parser::{parse_term, ParseInput, ParserError};
 
 pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
     let table = parse_term(input)?;
     let operators = parse_operators(input)?;
-    
-    Ok(Query {
-        table,
-        operators
-    })
+
+    Ok(Query { table, operators })
 }
 
-fn parse_operators(input: &mut ParseInput) -> Result<Vec<(M<String>, TabularOperator)>, ParserError> {
+fn parse_operators(
+    input: &mut ParseInput,
+) -> Result<Vec<(M<String>, TabularOperator)>, ParserError> {
     let mut operators = Vec::new();
 
     while !input.done() {
@@ -43,7 +38,7 @@ fn parse_operator(input: &mut ParseInput) -> Result<(M<String>, TabularOperator)
         "summarize" => parse_summarize(input)?,
         "top" => parse_top(input)?,
         "where" => parse_where(input)?,
-        _ => return Err(input.general_error("No tabular operator with this name"))
+        _ => return Err(input.general_error("No tabular operator with this name")),
     };
 
     Ok((operator_name, operator))
@@ -65,10 +60,10 @@ fn parse_kebab_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
                 name.push_str(&term.value);
             } else {
                 input.restore(checkpoint);
-                break
+                break;
             }
         } else {
-            break
+            break;
         }
     }
 
@@ -76,13 +71,15 @@ fn parse_kebab_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
 }
 
 fn parse_distinct(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Ok(TabularOperator::Distinct { columns: parse_columns(input)? })
+    Ok(TabularOperator::Distinct {
+        columns: parse_columns(input)?,
+    })
 }
 
 fn parse_columns(input: &mut ParseInput) -> Result<ast::query::Columns, ParserError> {
     let star_span = input.next_if(Token::Star);
     if let Some(span) = star_span {
-        return Ok(ast::query::Columns::Wildcard(span))
+        return Ok(ast::query::Columns::Wildcard(span));
     }
 
     let first_name = parse_term(input)?;

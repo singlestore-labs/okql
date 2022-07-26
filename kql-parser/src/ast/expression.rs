@@ -1,25 +1,25 @@
-use crate::spans::{M, MBox, Span};
+use crate::spans::{MBox, Span, M};
 
 /// Represents scalar, aggregate, and group expressions
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     Identifier {
-        name: M<String>
+        name: M<String>,
     },
     FuncCall {
         name: M<String>,
         open_paren_sym: Span,
         args: Vec<MBox<Expression>>,
-        close_paren_sym: Span
+        close_paren_sym: Span,
     },
     BinaryOp {
         left: MBox<Expression>,
         op: M<BinaryOp>,
-        right: MBox<Expression>
+        right: MBox<Expression>,
     },
     Literal {
-        value: Literal
-    }
+        value: Literal,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -70,5 +70,5 @@ pub enum Literal {
     Real(Option<f64>),
     /// A literal string value
     /// There is no "null" string value
-    String(String)
+    String(String),
 }

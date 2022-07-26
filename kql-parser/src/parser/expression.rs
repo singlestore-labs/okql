@@ -1,6 +1,10 @@
-use crate::{spans::{M, MBox}, lexer::Token, ast::expression::{Expression, BinaryOp, Literal}};
+use crate::{
+    ast::expression::{BinaryOp, Expression, Literal},
+    lexer::Token,
+    spans::{MBox, M},
+};
 
-use super::{ParserError, ParseInput, parse_term};
+use super::{parse_term, ParseInput, ParserError};
 
 #[allow(dead_code)]
 pub fn parse_expression(input: &mut ParseInput) -> Result<MBox<Expression>, ParserError> {
@@ -27,7 +31,7 @@ fn pratt_parse(input: &mut ParseInput, min_bp: u8) -> Result<MBox<Expression>, P
             let new_root = Expression::BinaryOp {
                 left: lhs,
                 op: bin_op,
-                right: rhs
+                right: rhs,
             };
             lhs = MBox::new_range(new_root, left, right)
         } else {
@@ -45,12 +49,12 @@ fn parse_leaf(input: &mut ParseInput) -> Result<MBox<Expression>, ParserError> {
     input.restore(checkpoint);
     if let Ok(value) = parse_literal(input) {
         let span = value.span.clone();
-        return Ok(MBox::new(Expression::Literal { value: value.value }, span))
+        return Ok(MBox::new(Expression::Literal { value: value.value }, span));
     }
     input.restore(checkpoint);
     if let Ok(term) = parse_term(input) {
         let span = term.span.clone();
-        return Ok(MBox::new(Expression::Identifier { name: term }, span))
+        return Ok(MBox::new(Expression::Identifier { name: term }, span));
     }
     // advance so that error is generated on the correct token
     let _ = input.next();
@@ -83,7 +87,7 @@ fn parse_literal(input: &mut ParseInput) -> Result<M<Literal>, ParserError> {
         // strings
         Token::StringLiteral(value) => Literal::String(value),
         // errors
-        _ => return Err(input.unexpected_token("Parse Literal"))
+        _ => return Err(input.unexpected_token("Parse Literal")),
     };
     Ok(M::new(value, span))
 }
@@ -110,7 +114,7 @@ fn try_parse_bin_op(input: &mut ParseInput) -> Option<M<BinaryOp>> {
         Token::Div => BinaryOp::Div,
         Token::Mod => BinaryOp::Mod,
 
-        _ => return None
+        _ => return None,
     };
     let _ = input.next();
     Some(M::new(op, span))
@@ -121,20 +125,13 @@ fn infix_binding_power(op: BinaryOp) -> (u8, u8) {
         BinaryOp::LogicalOr => (10, 1),
         BinaryOp::LogicalAnd => (20, 21),
 
-        BinaryOp::EQ
-        | BinaryOp::NEQ => (30, 31),
+        BinaryOp::EQ | BinaryOp::NEQ => (30, 31),
 
-        BinaryOp::LT
-        | BinaryOp::LTE
-        | BinaryOp::GT
-        | BinaryOp::GTE => (40, 41),
+        BinaryOp::LT | BinaryOp::LTE | BinaryOp::GT | BinaryOp::GTE => (40, 41),
 
-        BinaryOp::Add
-        | BinaryOp::Sub => (50, 51),
+        BinaryOp::Add | BinaryOp::Sub => (50, 51),
 
-        BinaryOp::Mul
-        | BinaryOp::Div
-        | BinaryOp::Mod => (60, 61),
+        BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => (60, 61),
     }
 }
 
@@ -155,9 +152,9 @@ mod tests {
             let parsed_literal = M::new(Literal::Int(value), span.clone());
             let parsed_expression = MBox::new(
                 Expression::Literal {
-                    value: Literal::Int(value)
+                    value: Literal::Int(value),
                 },
-                span.clone()
+                span.clone(),
             );
             assert_eq!(
                 parse_literal(&mut make_input(source)).unwrap(),
@@ -180,14 +177,14 @@ mod tests {
             ("foo", Span::from((0, 3))),
             ("foobar", Span::from((0, 6))),
             ("asdf", Span::from((0, 4))),
-            ("asdf2", Span::from((0, 5)))
+            ("asdf2", Span::from((0, 5))),
         ];
         for (source, span) in cases {
             let parsed_expression = MBox::new(
                 Expression::Identifier {
-                    name: M::new(source.to_string(), span.clone())
+                    name: M::new(source.to_string(), span.clone()),
                 },
-                span.clone()
+                span.clone(),
             );
             assert_eq!(
                 parse_leaf(&mut make_input(source)).unwrap(),
@@ -207,14 +204,14 @@ mod tests {
             ("(foo)", "foo", Span::from((1, 3))),
             ("(foobar)", "foobar", Span::from((1, 6))),
             ("(asdf)", "asdf", Span::from((1, 4))),
-            ("(asdf2)", "asdf2", Span::from((1, 5)))
+            ("(asdf2)", "asdf2", Span::from((1, 5))),
         ];
         for (source, ident, span) in cases {
             let parsed_expression = MBox::new(
                 Expression::Identifier {
-                    name: M::new(ident.to_string(), span.clone())
+                    name: M::new(ident.to_string(), span.clone()),
                 },
-                span.clone()
+                span.clone(),
             );
             assert_eq!(
                 parse_parenthetical(&mut make_input(source)).unwrap(),
@@ -235,9 +232,9 @@ mod tests {
         ($val:expr => ($span_l:expr, $span_r:expr)) => {
             MBox::new(
                 Expression::Literal {
-                    value: Literal::Long($val)
+                    value: Literal::Long($val),
                 },
-                Span::from(($span_l, $span_r))
+                Span::from(($span_l, $span_r)),
             )
         };
     }
@@ -254,9 +251,9 @@ mod tests {
                 Expression::BinaryOp {
                     left: $left,
                     op: $op,
-                    right: $right
+                    right: $right,
                 },
-                Span::from(($span_l, $span_r))
+                Span::from(($span_l, $span_r)),
             )
         };
     }
@@ -289,16 +286,10 @@ mod tests {
             ) => (0, 9)
         );
 
-        let cases = [
-            (source0, expected0),
-            (source1, expected1)
-        ];
+        let cases = [(source0, expected0), (source1, expected1)];
 
         for (source, expected) in cases {
-            assert_eq!(
-                parse_expression(&mut make_input(source)).unwrap(),
-                expected
-            );
+            assert_eq!(parse_expression(&mut make_input(source)).unwrap(), expected);
         }
     }
 
@@ -330,16 +321,10 @@ mod tests {
             ) => (0, 9)
         );
 
-        let cases = [
-            (source0, expected0),
-            (source1, expected1)
-        ];
+        let cases = [(source0, expected0), (source1, expected1)];
 
         for (source, expected) in cases {
-            assert_eq!(
-                parse_expression(&mut make_input(source)).unwrap(),
-                expected
-            );
+            assert_eq!(parse_expression(&mut make_input(source)).unwrap(), expected);
         }
     }
 }

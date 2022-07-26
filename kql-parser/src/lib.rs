@@ -13,7 +13,7 @@ mod parser;
 
 pub fn parse<SN: ToString, SC: ToString>(
     source_name: SN,
-    source_code: SC
+    source_code: SC,
 ) -> Option<ast::query::Query> {
     let source_name = source_name.to_string();
     let source_code = source_code.to_string();
@@ -34,7 +34,7 @@ pub fn parse<SN: ToString, SC: ToString>(
         Err(error) => {
             println!("{:?}", Report::new(error));
             return None;
-        },
+        }
     };
 
     Some(ast)
