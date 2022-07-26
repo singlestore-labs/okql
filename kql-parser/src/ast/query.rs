@@ -87,6 +87,7 @@ pub struct JoinParams {
     kind: Option<JoinKind>
 }
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum JoinKind {
     /// Inner join with left side deduplication
@@ -118,6 +119,7 @@ pub enum JoinKind {
     RightSemi
 }
 
+#[allow(dead_code)]
 impl JoinKind {
     /// See https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/joinoperator?pivots=azuredataexplorer#returns
     pub fn return_columns(&self) -> JoinReturnColumns {

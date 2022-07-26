@@ -29,5 +29,13 @@ pub fn parse<SN: ToString, SC: ToString>(
         }
     };
 
-    unimplemented!()
+    let ast = match parser::parse(src.clone(), tokens) {
+        Ok(query) => query,
+        Err(error) => {
+            println!("{:?}", Report::new(error));
+            return None;
+        },
+    };
+
+    Some(ast)
 }

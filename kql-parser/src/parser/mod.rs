@@ -3,7 +3,7 @@ pub mod expression;
 
 use std::sync::Arc;
 
-use crate::spans::{M, MBox, Span};
+use crate::spans::{M, Span};
 use crate::lexer::Token;
 use crate::ast::query::Query;
 
@@ -17,14 +17,6 @@ pub enum ParserError{
     #[diagnostic()]
     #[error("End of input reached")]
     EndOfInput,
-    #[diagnostic()]
-    #[error("Failed to parse")]
-    Simple {
-        #[source_code]
-        src: Arc<NamedSource>,
-        #[label("Unable to parse this code")]
-        span: Span,
-    },
     #[diagnostic()]
     #[error("Failed to parse: {message}")]
     General {
@@ -119,9 +111,9 @@ impl ParseInput {
         self.index = checkpoint.index
     }
 
-    pub fn get_source(&self) -> Arc<NamedSource> {
-        self.src.clone()
-    }
+    // pub fn get_source(&self) -> Arc<NamedSource> {
+    //     self.src.clone()
+    // }
 
     pub fn done(&self) -> bool {
         self.index >= self.tokens.len()
@@ -156,19 +148,19 @@ impl ParseInput {
         Some(self.next().ok()?.span.clone())
     }
 
-    pub fn has(&self, num: usize) -> bool {
-        self.index + num <= self.tokens.len()
-    }
+    // pub fn has(&self, num: usize) -> bool {
+    //     self.index + num <= self.tokens.len()
+    // }
 
-    pub fn slice_next(&mut self, num: usize) -> Result<&[M<Token>], ParserError> {
-        if self.has(num) {
-            let result = &self.tokens[self.index..self.index+num];
-            self.index += num;
-            Ok(result)
-        } else {
-            Err(ParserError::EndOfInput)
-        }
-    }
+    // pub fn slice_next(&mut self, num: usize) -> Result<&[M<Token>], ParserError> {
+    //     if self.has(num) {
+    //         let result = &self.tokens[self.index..self.index+num];
+    //         self.index += num;
+    //         Ok(result)
+    //     } else {
+    //         Err(ParserError::EndOfInput)
+    //     }
+    // }
 }
 
 fn parse_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
@@ -187,7 +179,6 @@ mod tests {
 
     use crate::{
         lexer::tokenize,
-        spans::Span,
         parser::ParseInput
     };
 

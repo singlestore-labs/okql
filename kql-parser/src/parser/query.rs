@@ -1,5 +1,5 @@
 
-use crate::spans::{M, MBox, Span, span_precedes_span, join_spans};
+use crate::spans::{M, span_precedes_span, join_spans};
 use crate::lexer::Token;
 use crate::ast;
 use crate::ast::query::{Query, TabularOperator};
@@ -7,9 +7,6 @@ use crate::ast::query::{Query, TabularOperator};
 use crate::parser::{
     ParserError, ParseInput,
     parse_term
-    // statements::parse_block,
-    // types::parse_valtype,
-    // expressions::parse_expression
 };
 
 pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
@@ -25,7 +22,7 @@ pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
 fn parse_operators(input: &mut ParseInput) -> Result<Vec<(M<String>, TabularOperator)>, ParserError> {
     let mut operators = Vec::new();
 
-    while input.has(1) {
+    while !input.done() {
         operators.push(parse_operator(input)?);
     }
 
@@ -57,7 +54,7 @@ fn parse_kebab_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
     let mut span = first_term.span.clone();
     let mut name = first_term.value;
 
-    while input.has(1) {
+    while !input.done() {
         let checkpoint = input.checkpoint();
         let hyphen = input.next_if(Token::Div);
         if hyphen.is_some() {

@@ -1,7 +1,8 @@
-use crate::{spans::{M, MBox, Span}, lexer::Token, ast::expression::{Expression, BinaryOp, Literal}};
+use crate::{spans::{M, MBox}, lexer::Token, ast::expression::{Expression, BinaryOp, Literal}};
 
 use super::{ParserError, ParseInput, parse_term};
 
+#[allow(dead_code)]
 pub fn parse_expression(input: &mut ParseInput) -> Result<MBox<Expression>, ParserError> {
     pratt_parse(input, 0)
 }
@@ -51,7 +52,8 @@ fn parse_leaf(input: &mut ParseInput) -> Result<MBox<Expression>, ParserError> {
         let span = term.span.clone();
         return Ok(MBox::new(Expression::Identifier { name: term }, span))
     }
-    input.next();
+    // advance so that error is generated on the correct token
+    let _ = input.next();
     Err(input.unexpected_token("Parse Leaf"))
 }
 
@@ -139,8 +141,8 @@ fn infix_binding_power(op: BinaryOp) -> (u8, u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::tests::make_input;
-    use pretty_assertions::{assert_eq, assert_ne};
+    use crate::{parser::tests::make_input, spans::Span};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn parsing_supports_ints() {
