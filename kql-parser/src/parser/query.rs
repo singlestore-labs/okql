@@ -101,7 +101,13 @@ fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 }
 
 fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("limit operator"))
+    let token = input.next()?;
+    let amount = match token.value {
+        Token::IntLiteral(value) => value as i64,
+        Token::LongLiteral(value) => value,
+        _ => return Err(input.unexpected_token("Expected number literal for limit argument"))
+    };
+    Ok(TabularOperator::Limit { limit: M::new(amount, token.span.clone()) })
 }
 
 fn parse_project(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
