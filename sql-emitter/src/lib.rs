@@ -1,6 +1,15 @@
-mod ast;
+pub mod ast;
 
-use std::fmt::{Write, Result};
+use std::fmt::{Write, Result as FResult};
+
+pub fn emit(select_stmt: &ast::SelectStatement) -> Result<String, String> {
+    let mut printer = Printer::default();
+    if printer.print_query(&select_stmt).is_err() {
+        Err(String::from("Failed to format SQL output"))
+    } else {
+        Ok(String::from(printer))
+    }
+}
 
 #[derive(Default, Debug)]
 pub struct Printer {
@@ -28,7 +37,7 @@ impl Printer {
         }
     }
 
-    pub fn print_query(&mut self, select_stmt: &ast::SelectStatement) -> Result {
+    pub fn print_query(&mut self, select_stmt: &ast::SelectStatement) -> FResult {
         self.print_select(&select_stmt.modifier, &select_stmt.select)?;
         self.print_from(&select_stmt.from)?;
         if let Some(cond) = &select_stmt.where_ {
@@ -40,7 +49,7 @@ impl Printer {
         Ok(())
     }
 
-    fn print_select(&mut self, modifier: &Option<ast::Modifier>, select: &ast::SelectList) -> Result {
+    fn print_select(&mut self, modifier: &Option<ast::Modifier>, select: &ast::SelectList) -> FResult {
         self.start_line();
         let columns = match select {
             ast::SelectList::Explicit { fields } => {
@@ -57,7 +66,7 @@ impl Printer {
         Ok(())
     }
 
-    fn print_from(&mut self, table_refs: &ast::TableReference) -> Result {
+    fn print_from(&mut self, table_refs: &ast::TableReference) -> FResult {
         match table_refs {
             ast::TableReference::TableName { name } => {
                 self.start_line();
@@ -81,14 +90,14 @@ impl Printer {
         Ok(())
     }
 
-    fn print_where(&mut self, cond: &ast::SearchCondition) -> Result {
+    fn print_where(&mut self, cond: &ast::SearchCondition) -> FResult {
         match cond {
             ast::SearchCondition::BoolExpr { left, op, right } => todo!(),
             ast::SearchCondition::ComparisonExpr { left, op, right } => todo!(),
         }
     }
 
-    fn print_order_by(&mut self, cond: &ast::OrderByClause) -> Result {
+    fn print_order_by(&mut self, cond: &ast::OrderByClause) -> FResult {
         todo!()
     }
 }
