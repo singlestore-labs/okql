@@ -146,23 +146,3 @@ fn apply_operator(
         kast::TabularOperator::Where { expr } => todo!(),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn test_simple() {
-        match kql_to_sql(
-            String::from("test"),
-            String::from("foobar | project a, b, c"),
-        ) {
-            Ok(sql) => assert_eq!(sql, String::from("SELECT a, b, c\nFROM foobar\n")),
-            Err(error) => {
-                println!("{}", error);
-                panic!();
-            }
-        }
-    }
-}
