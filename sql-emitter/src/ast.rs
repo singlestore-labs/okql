@@ -11,7 +11,7 @@ impl SelectStatement {
     pub fn simple(table: String) -> Self {
         SelectStatement {
             modifier: None,
-            select: SelectList::Wildcard,
+            select: SelectList { wildcard: true, columns: vec![] },
             from: TableReference::TableName { name: table },
             where_: None,
             order_by: None
@@ -21,7 +21,7 @@ impl SelectStatement {
     pub fn simple_wrapping(other: Self) -> Self {
         SelectStatement {
             modifier: None,
-            select: SelectList::Wildcard,
+            select: SelectList { wildcard: true, columns: vec![] },
             from: TableReference::InnerStatement { value: Box::new(other) },
             where_: None,
             order_by: None
@@ -34,11 +34,9 @@ pub enum Modifier {
     Distinct
 }
 
-pub enum SelectList {
-    Explicit {
-        fields: Vec<SelectColumn>
-    },
-    Wildcard
+pub struct SelectList {
+    pub wildcard: bool,
+    pub columns: Vec<SelectColumn>
 }
 
 pub struct SelectColumn {

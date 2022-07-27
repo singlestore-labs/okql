@@ -9,3 +9,6 @@ edition = "2021"
 miette = { version = "3.3.0", features = ["fancy"] }
 kql-parser = { path = "../kql-parser" }
 sql-emitter = { path = "../sql-emitter" }
+
+[dev-dependencies]
+pretty_assertions = "1.1.0"
