@@ -1,5 +1,5 @@
 use crate::ast::{self, ColumnDefinition};
-use crate::ast::query::{Query, TabularOperator};
+use crate::ast::query::{Query, TabularOperator, SortOrder, NullsPosition};
 use crate::lexer::Token;
 use crate::spans::{join_spans, span_precedes_span, M};
 
@@ -159,6 +159,28 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
         "by" => span,
         _ => return Err(input.unexpected_token("Expected 'by' keyword"))
     };
+
+    let expr = parse_expression(input)?;
+
+    let second_term = parse_term(input)?;
+    let order = match second_term.value.as_str() {
+        "asc" => Some(M::new(SortOrder::Ascending, second_term.span.clone())),
+        "desc" => Some(M::new( SortOrder::Descending, second_term.span.clone())),
+        _ => None
+    };
+
+    let nulls_kwd = parse_term(input)?;
+    let nulls_pos = match nulls_kwd.value.as_str() {
+        "nulls" => parse_term(input)?,
+        _ => return Err(input.unexpected_token("Unknown keyword"))
+    };
+    let nulls = match nulls_pos.value.as_str() {
+        "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
+        "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
+        _ => None
+    };
+
+    Ok(TabularOperator::Sort { by_kwd, expr, order, nulls })
 }
 
 fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
