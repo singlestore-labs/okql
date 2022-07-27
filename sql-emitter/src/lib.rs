@@ -56,22 +56,21 @@ impl Printer {
             Some(ast::Modifier::All) => write!(self.output, "SELECT ALL ")?,
             None => write!(self.output, "SELECT ")?
         };
-        match select {
-            ast::SelectList::Explicit { fields } => {
-                let mut first = true;
-                for field in fields {
-                    if !first {
-                        write!(self.output, ", ")?;
-                    }
-                    self.print_val_expr(&field.value)?;
-                    if let Some(alias) = &field.alias {
-                        write!(self.output, " as {}", alias)?;
-                    }
-                    first = false;
-                }
-            },
-            ast::SelectList::Wildcard => write!(self.output, "*")?
-        };
+        let mut first = true;
+        if select.wildcard {
+            write!(self.output, "* ")?;
+            first = false;
+        }
+        for field in select.columns.iter() {
+            if !first {
+                write!(self.output, ", ")?;
+            }
+            self.print_val_expr(&field.value)?;
+            if let Some(alias) = &field.alias {
+                write!(self.output, " as {}", alias)?;
+            }
+            first = false;
+        }
         self.end_line();
         Ok(())
     }
@@ -112,7 +111,11 @@ impl Printer {
     }
 
     fn print_val_expr(&mut self, expr: &ast::ValueExpression) -> FResult {
-        todo!()
+        match expr {
+            ast::ValueExpression::Column { name } => write!(self.output, "{}", name),
+            ast::ValueExpression::FuncCall { name, args } => todo!(),
+            ast::ValueExpression::ArithmeticExpr { left, op, right } => todo!(),
+        }
     }
 }
 
@@ -130,7 +133,10 @@ mod tests {
     fn test_simple() {
         let query = ast::SelectStatement {
             modifier: None,
-            select: ast::SelectList::Wildcard,
+            select: ast::SelectList {
+                wildcard: true,
+                columns: vec![]
+            },
             from: ast::TableReference::TableName { name: String::from("users") },
             where_: None,
             order_by: None,

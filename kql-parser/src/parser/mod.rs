@@ -41,7 +41,7 @@ pub enum ParserError {
     NotYetSupported {
         #[source_code]
         src: Arc<NamedSource>,
-        #[label("Unable to parse this code")]
+        #[label("Unsupported operation")]
         span: Span,
         feature: String,
     },

@@ -1,9 +1,11 @@
-use crate::ast;
+use crate::ast::{self, ColumnDefinition};
 use crate::ast::query::{Query, TabularOperator};
 use crate::lexer::Token;
 use crate::spans::{join_spans, span_precedes_span, M};
 
 use crate::parser::{parse_term, ParseInput, ParserError};
+
+use super::expression::parse_expression;
 
 pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
     let table = parse_term(input)?;
@@ -25,6 +27,8 @@ fn parse_operators(
 }
 
 fn parse_operator(input: &mut ParseInput) -> Result<(M<String>, TabularOperator), ParserError> {
+    input.assert_next(Token::Pipe, "Tabular operators begin with pipe")?;
+
     let operator_name = parse_kebab_term(input)?;
 
     let operator = match operator_name.value.as_str() {
@@ -51,20 +55,21 @@ fn parse_kebab_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
 
     while !input.done() {
         let checkpoint = input.checkpoint();
-        let hyphen = input.next_if(Token::Div);
+        let hyphen = input.next_if(Token::Sub);
+        
         if hyphen.is_some() {
-            let term = parse_term(input)?;
-            if span_precedes_span(span.clone(), term.span.clone()) {
-                span = join_spans(span, term.span.clone());
-                name.push('-');
-                name.push_str(&term.value);
-            } else {
-                input.restore(checkpoint);
-                break;
+            if let Ok(term) = parse_term(input) {
+                if span_precedes_span(span.clone(), term.span.clone()) {
+                    span = join_spans(span, term.span.clone());
+                    name.push('-');
+                    name.push_str(&term.value);
+                    continue;
+                }
             }
-        } else {
-            break;
         }
+
+        input.restore(checkpoint);
+        break;
     }
 
     Ok(M::new(name, span))
@@ -111,7 +116,40 @@ fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 }
 
 fn parse_project(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("project operator"))
+    let mut columns = Vec::new();
+
+    loop {
+        let checkpoint = input.checkpoint();
+        let column = match parse_column_definition(input) {
+            Ok(column) => column,
+            Err(_) => {
+                input.restore(checkpoint);
+                break;
+            },
+        };
+
+        columns.push(column);
+
+
+        if input.next_if(Token::Comma).is_none() {
+            break;
+        }
+    }
+
+    Ok(TabularOperator::Project { columns })
+}
+
+fn parse_column_definition(input: &mut ParseInput) -> Result<ColumnDefinition, ParserError> {
+    let column = parse_term(input)?;
+    let expr = if input.next_if(Token::Assign).is_some() {
+        Some(parse_expression(input)?)
+    } else {
+        None
+    };
+    Ok(ColumnDefinition {
+        column,
+        expr,
+    })
 }
 
 fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
