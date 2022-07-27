@@ -115,7 +115,12 @@ fn parse_project(input: &mut ParseInput) -> Result<TabularOperator, ParserError>
 }
 
 fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("sort operator"))
+    let first_term = parse_term(input)?;
+    let mut span = first_term.span.clone();
+    let by_kwd = match first_term.value.as_str() {
+        "by" => span,
+        _ => return Err(input.unexpected_token("Expected 'by' keyword"))
+    };
 }
 
 fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
