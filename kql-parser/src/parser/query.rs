@@ -207,15 +207,10 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let mut result_columns: Vec<ColumnDefinition> = Vec::new();
 
-    loop {
-        result_columns.push(parse_column_definition(input)?);
+    result_columns.push(parse_column_definition(input)?);
 
-        let checkpoint = input.checkpoint();
-        let next_term = parse_term(input)?;
-        if next_term.value.as_str() == "by" {
-            input.restore(checkpoint);
-            break;
-        };
+    while input.next_if(Token::Comma).is_some() {
+        result_columns.push(parse_column_definition(input)?);
     }
 
     let next_term = parse_term(input)?;
@@ -226,7 +221,7 @@ fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserErro
 
     let mut grouping_columns: Vec<ColumnDefinition> = Vec::new();
 
-    while !input.done() {
+    while input.next_if(Token::Comma).is_some() {
         grouping_columns.push(parse_column_definition(input)?);
     }
 
@@ -240,4 +235,22 @@ fn parse_top(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 fn parse_where(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let expr = parse_expression(input)?;
     Ok(TabularOperator::Where { expr })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{parser::tests::make_input, spans::Span};
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn parse_summarize_supports_groupings() {
+        let cases = [
+            ("summarize NumTransactions=count(), Total=sum(UnitPrice * NumUnits) by Fruit, StartOfMonth=startofmonth(SellDateTime)", Span::from((0, 124))),
+        ];
+        for (source, span) in cases {
+            parse_summarize(&mut make_input(source)).unwrap();
+
+        }
+    }
 }
