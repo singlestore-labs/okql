@@ -204,7 +204,32 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 }
 
 fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("summarize operator"))
+    let mut result_columns: Vec<ColumnDefinition> = Vec::new();
+
+    loop {
+        result_columns.push(parse_column_definition(input)?);
+
+        let checkpoint = input.checkpoint();
+        let next_term = parse_term(input)?;
+        if next_term.value.as_str() == "by" {
+            input.restore(checkpoint);
+            break;
+        };
+    }
+
+    let next_term = parse_term(input)?;
+    let by_kwd = match next_term.value.as_str() {
+        "by" => next_term.span.clone(),
+        _ => return Err(input.unexpected_token("Expected 'by' keyword"))
+    };
+
+    let mut grouping_columns: Vec<ColumnDefinition> = Vec::new();
+
+    while !input.done() {
+        grouping_columns.push(parse_column_definition(input)?);
+    }
+
+    Ok(TabularOperator::Summarize { result_columns, by_kwd, grouping_columns })
 }
 
 fn parse_top(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
