@@ -56,7 +56,7 @@ fn parse_kebab_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
     while !input.done() {
         let checkpoint = input.checkpoint();
         let hyphen = input.next_if(Token::Sub);
-        
+
         if hyphen.is_some() {
             if let Ok(term) = parse_term(input) {
                 if span_precedes_span(span.clone(), term.span.clone()) {
@@ -118,22 +118,14 @@ fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 fn parse_project(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let mut columns = Vec::new();
 
-    loop {
-        let checkpoint = input.checkpoint();
-        let column = match parse_column_definition(input) {
-            Ok(column) => column,
-            Err(_) => {
-                input.restore(checkpoint);
-                break;
-            },
-        };
+    if input.peek()?.value == Token::Pipe {
+        return Ok(TabularOperator::Project { columns })
+    }
 
-        columns.push(column);
+    columns.push(parse_column_definition(input)?);
 
-
-        if input.next_if(Token::Comma).is_none() {
-            break;
-        }
+    while input.next_if(Token::Comma).is_some() {
+        columns.push(parse_column_definition(input)?);
     }
 
     Ok(TabularOperator::Project { columns })
@@ -218,5 +210,6 @@ fn parse_top(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 }
 
 fn parse_where(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("where operator"))
+    let expr = parse_expression(input)?;
+    Ok(TabularOperator::Where { expr })
 }

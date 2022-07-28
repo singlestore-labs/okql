@@ -28,7 +28,7 @@ pub enum BinaryOp {
     Add,
     /// Subtract "-"
     Sub,
-    /// Multipley "*"
+    /// Multiply "*"
     Mul,
     /// Divide "/"
     Div,
