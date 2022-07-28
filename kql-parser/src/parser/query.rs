@@ -152,23 +152,25 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
         _ => return Err(input.unexpected_token("Expected 'by' keyword"))
     };
     loop {
-        let checkpoint = input.checkpoint();
-
         let column = match parse_term(input) {
             Ok(column) => column,
-            Err(_) => {
-                input.restore(checkpoint);
-                break;
-            },
+            Err(_) => return Err(input.unexpected_token("Expected column name"))
         };
+
+        let checkpoint = input.checkpoint();
 
         let order_term = parse_term(input)?;
         let order = match order_term.value.as_str() {
             "asc" => Some(M::new(SortOrder::Ascending, order_term.span.clone())),
             "desc" => Some(M::new( SortOrder::Descending, order_term.span.clone())),
-            _ => None
+            _ => {
+                input.restore(checkpoint);
+                break;
+            }
         };
-    
+        
+        let checkpoint = input.checkpoint();
+        
         let nulls_kwd = parse_term(input)?;
         let nulls_pos = match nulls_kwd.value.as_str() {
             "nulls" => parse_term(input)?,
