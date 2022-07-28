@@ -107,10 +107,11 @@ impl Printer {
     }
 
     fn print_where(&mut self, cond: &ast::SearchCondition) -> FResult {
-        match cond {
-            ast::SearchCondition::BoolExpr { left, op, right } => todo!(),
-            ast::SearchCondition::ComparisonExpr { left, op, right } => todo!(),
-        }
+        self.start_line();
+        write!(self.output, "WHERE ")?;
+        self.print_search_condition(cond)?;
+        self.end_line();
+        Ok(())
     }
 
     fn print_order_by(&mut self, cond: &ast::OrderByClause) -> FResult {
@@ -146,6 +147,26 @@ impl Printer {
                 ast::Literal::String(v) => write!(self.output, "{}", v),
             },
         }
+    }
+
+    fn print_search_condition(&mut self, cond: &ast::SearchCondition) -> FResult {
+        match cond {
+            ast::SearchCondition::BoolExpr { left, op, right } => {
+                write!(self.output, "(")?;
+                self.print_search_condition(left)?;
+                write!(self.output, " {} ", op)?;
+                self.print_search_condition(right)?;
+                write!(self.output, ")")?;
+            },
+            ast::SearchCondition::ComparisonExpr { left, op, right } => {
+                write!(self.output, "(")?;
+                self.print_val_expr(left)?;
+                write!(self.output, " {} ", op)?;
+                self.print_val_expr(right)?;
+                write!(self.output, ")")?;
+            },
+        }
+        Ok(())
     }
 }
 

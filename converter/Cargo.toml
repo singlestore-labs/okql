@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 miette = { version = "3.3.0", features = ["fancy"] }
+thiserror = "1.0.30"
 kql-parser = { path = "../kql-parser" }
 sql-emitter = { path = "../sql-emitter" }
 

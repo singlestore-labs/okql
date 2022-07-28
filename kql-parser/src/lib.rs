@@ -18,15 +18,8 @@ pub enum Error {
     Parser { error: ParserError },
 }
 
-pub fn parse<SN: ToString, SC: ToString>(
-    source_name: SN,
-    source_code: SC,
-) -> Result<ast::query::Query, Error> {
-    let source_name = source_name.to_string();
-    let source_code = source_code.to_string();
-    let src = Arc::new(NamedSource::new(source_name, source_code.clone()));
-
-    let tokens = match lexer::tokenize(src.clone(), source_code) {
+pub fn parse(src: Arc<NamedSource>, kql_code: String) -> Result<ast::query::Query, Error> {
+    let tokens = match lexer::tokenize(src.clone(), kql_code) {
         Ok(token_data) => token_data,
         Err(errors) => {
             return Err(Error::Lexer { errors });

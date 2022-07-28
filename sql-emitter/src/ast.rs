@@ -4,7 +4,7 @@ pub struct SelectStatement {
     pub modifier: Option<Modifier>,
     pub select: SelectList,
     pub from: TableReference,
-    pub where_: Option<SearchCondition>,
+    pub where_: Option<Box<SearchCondition>>,
     pub order_by: Option<OrderByClause>,
 }
 
@@ -71,9 +71,31 @@ pub enum SearchCondition {
     },
 }
 
+impl SearchCondition {
+    pub fn depends_on_any(&self, columns: &Vec<String>) -> bool {
+        match self {
+            SearchCondition::BoolExpr { left, op, right } => {
+                left.depends_on_any(columns) || right.depends_on_any(columns)
+            }
+            SearchCondition::ComparisonExpr { left, op, right } => {
+                left.depends_on_any(columns) || right.depends_on_any(columns)
+            }
+        }
+    }
+}
+
 pub enum BoolOperator {
     AND,
     OR,
+}
+
+impl fmt::Display for BoolOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BoolOperator::AND => write!(f, "AND"),
+            BoolOperator::OR => write!(f, "OR"),
+        }
+    }
 }
 
 pub enum ComparisonOperator {
@@ -83,6 +105,19 @@ pub enum ComparisonOperator {
     GTE,
     EQ,
     NEQ,
+}
+
+impl fmt::Display for ComparisonOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ComparisonOperator::LT => write!(f, "<"),
+            ComparisonOperator::GT => write!(f, ">"),
+            ComparisonOperator::LTE => write!(f, "<="),
+            ComparisonOperator::GTE => write!(f, ">="),
+            ComparisonOperator::EQ => write!(f, "=="),
+            ComparisonOperator::NEQ => write!(f, "!="),
+        }
+    }
 }
 
 pub enum ValueExpression {
@@ -104,7 +139,7 @@ pub enum ValueExpression {
 }
 
 impl ValueExpression {
-    fn depends_on_any(&self, columns: &Vec<String>) -> bool {
+    pub fn depends_on_any(&self, columns: &Vec<String>) -> bool {
         match self {
             ValueExpression::Column { name } => columns.contains(name),
             ValueExpression::FuncCall { name, args } => {
