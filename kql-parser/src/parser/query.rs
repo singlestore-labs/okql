@@ -178,15 +178,12 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
                 match nulls_pos.value.as_str() {
                     "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
                     "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
-                    _ => {
-                        input.restore(checkpoint);
-                        None
-                    }
+                    _ => return Err(input.unexpected_token("Expected nulls position"))
                 }
             }
             _ => {
                 input.restore(checkpoint);
-                break;
+                None
             }
         };
     
@@ -221,6 +218,7 @@ fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserErro
 
     let mut grouping_columns: Vec<ColumnDefinition> = Vec::new();
 
+    grouping_columns.push(parse_column_definition(input)?);
     while input.next_if(Token::Comma).is_some() {
         grouping_columns.push(parse_column_definition(input)?);
     }
