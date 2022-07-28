@@ -106,9 +106,7 @@ impl Merger {
             }
             kast::TabularOperator::Sort {
                 by_kwd,
-                expr,
-                order,
-                nulls,
+                sortings,
             } => todo!(),
 
             kast::TabularOperator::Summarize {
