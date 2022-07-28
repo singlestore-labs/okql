@@ -1,5 +1,5 @@
-pub mod query;
 pub mod expression;
+pub mod query;
 
-pub use query::*;
 pub use expression::*;
+pub use query::*;

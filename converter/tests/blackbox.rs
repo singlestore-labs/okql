@@ -13,7 +13,8 @@ fn test_all() {
 
     for file_name in kql_files {
         println!("Testing '{}'", file_name);
-        let kql_contents = fs::read_to_string(format!("./tests/conversions/{}", file_name)).unwrap();
+        let kql_contents =
+            fs::read_to_string(format!("./tests/conversions/{}", file_name)).unwrap();
         let stem = file_name.trim_end_matches(".kql");
         let sql_contents = fs::read_to_string(format!("./tests/conversions/{}.sql", stem)).unwrap();
 
@@ -22,7 +23,7 @@ fn test_all() {
             Err(error) => {
                 println!("{}", error);
                 panic!("Failed to convert '{}'", file_name);
-            },
+            }
         };
 
         assert_eq!(sql_contents, result_sql);

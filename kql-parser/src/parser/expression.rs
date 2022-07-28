@@ -60,9 +60,19 @@ fn parse_leaf(input: &mut ParseInput) -> Result<MBox<Expression>, ParserError> {
             while input.next_if(Token::Comma).is_some() {
                 args.push(parse_expression(input)?);
             }
-            let close_paren_sym = input.assert_next(Token::RParen, "No closing parenthesis for function call")?;
+            let close_paren_sym =
+                input.assert_next(Token::RParen, "No closing parenthesis for function call")?;
             let end_span = close_paren_sym.clone();
-            return Ok(MBox::new_range(Expression::FuncCall { name: term, open_paren_sym, args, close_paren_sym }, span, end_span))
+            return Ok(MBox::new_range(
+                Expression::FuncCall {
+                    name: term,
+                    open_paren_sym,
+                    args,
+                    close_paren_sym,
+                },
+                span,
+                end_span,
+            ));
         } else {
             return Ok(MBox::new(Expression::Identifier { name: term }, span));
         }

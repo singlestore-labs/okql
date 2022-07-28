@@ -1,5 +1,6 @@
-use crate::ast::{self, ColumnDefinition, Sorting};
 use crate::ast::query::{Query, TabularOperator, SortOrder, NullsPosition};
+use crate::ast::{self, ColumnDefinition, Sorting};
+
 use crate::lexer::Token;
 use crate::spans::{join_spans, span_precedes_span, M};
 
@@ -110,16 +111,18 @@ fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let amount = match token.value {
         Token::IntLiteral(value) => value as i64,
         Token::LongLiteral(value) => value,
-        _ => return Err(input.unexpected_token("Expected number literal for limit argument"))
+        _ => return Err(input.unexpected_token("Expected number literal for limit argument")),
     };
-    Ok(TabularOperator::Limit { limit: M::new(amount, token.span.clone()) })
+    Ok(TabularOperator::Limit {
+        limit: M::new(amount, token.span.clone()),
+    })
 }
 
 fn parse_project(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let mut columns = Vec::new();
 
     if input.peek()?.value == Token::Pipe {
-        return Ok(TabularOperator::Project { columns })
+        return Ok(TabularOperator::Project { columns });
     }
 
     columns.push(parse_column_definition(input)?);
@@ -138,10 +141,7 @@ fn parse_column_definition(input: &mut ParseInput) -> Result<ColumnDefinition, P
     } else {
         None
     };
-    Ok(ColumnDefinition {
-        column,
-        expr,
-    })
+    Ok(ColumnDefinition { column, expr })
 }
 
 fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
