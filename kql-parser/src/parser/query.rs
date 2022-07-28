@@ -99,7 +99,15 @@ fn parse_columns(input: &mut ParseInput) -> Result<ast::query::Columns, ParserEr
 }
 
 fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("extend operator"))
+    let mut columns = Vec::new();
+
+    columns.push(parse_column_definition(input)?);
+
+    while input.next_if(Token::Comma).is_some() {
+        columns.push(parse_column_definition(input)?);
+    }
+
+    Ok(TabularOperator::Extend { columns })
 }
 
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
@@ -259,6 +267,19 @@ mod tests {
     fn parse_summarize_supports_groupings() {
         let source = "NumTransactions=2, Total=foobar by Fruit, StartOfMonth";
         let result = parse_summarize(&mut make_input(source));
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                println!("{:?}", Report::new(error));
+                panic!();
+            }
+        }
+    }
+
+    #[test]
+    fn parse_extend_supports_multiple_columns() {
+        let source = "Duration = CreatedOn - CompletedOn, Age = now - CreatedOn, IsSevere = Level == 'Critical' or Level == 'Error'";
+        let result = parse_extend(&mut make_input(source));
         match result {
             Ok(_) => {}
             Err(error) => {
