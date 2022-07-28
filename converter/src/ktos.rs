@@ -32,24 +32,30 @@ pub fn expression(expr: kast::Expression) -> Result<Box<sast::ValueExpression>, 
             close_paren_sym,
         } => {
             let name = name.value;
-            let result: Result<Vec<Box<sast::ValueExpression>>, ConverterError> = args.into_iter().map(|arg| expression(*arg.value)).collect();
-            sast::ValueExpression::FuncCall { name, args: result? }
-        },
+            let result: Result<Vec<Box<sast::ValueExpression>>, ConverterError> =
+                args.into_iter().map(|arg| expression(*arg.value)).collect();
+            sast::ValueExpression::FuncCall {
+                name,
+                args: result?,
+            }
+        }
         kast::Expression::BinaryOp { left, op, right } => {
             let left = expression(*left.value)?;
             let right = expression(*right.value)?;
             match op.value {
-                kast::BinaryOp::Add => sast::ValueExpression::ArithmeticExpr {
-                    left, op: sast::ArithmeticOperator::Add, right
-                },
-                kast::BinaryOp::Sub => sast::ValueExpression::ArithmeticExpr {
-                    left, op: sast::ArithmeticOperator::Sub, right
-                },
-                kast::BinaryOp::Mul => sast::ValueExpression::ArithmeticExpr {
-                    left, op: sast::ArithmeticOperator::Mul, right
-                },
-                kast::BinaryOp::Div => sast::ValueExpression::ArithmeticExpr {
-                    left, op: sast::ArithmeticOperator::Div, right
+                kast::BinaryOp::Add
+                | kast::BinaryOp::Sub
+                | kast::BinaryOp::Mul
+                | kast::BinaryOp::Div => sast::ValueExpression::ArithmeticExpr {
+                    left,
+                    op: match op.value {
+                        kast::BinaryOp::Add => sast::ArithmeticOperator::Add,
+                        kast::BinaryOp::Sub => sast::ArithmeticOperator::Sub,
+                        kast::BinaryOp::Mul => sast::ArithmeticOperator::Mul,
+                        kast::BinaryOp::Div => sast::ArithmeticOperator::Div,
+                        _ => unreachable!(),
+                    },
+                    right,
                 },
                 kast::BinaryOp::Mod => todo!(),
                 kast::BinaryOp::LogicalAnd => todo!(),
@@ -61,7 +67,7 @@ pub fn expression(expr: kast::Expression) -> Result<Box<sast::ValueExpression>, 
                 kast::BinaryOp::LTE => todo!(),
                 kast::BinaryOp::GTE => todo!(),
             }
-        },
+        }
         kast::Expression::Literal { value } => {
             let literal = match value {
                 kast::Literal::Bool(Some(v)) => sast::Literal::Bool(v),
@@ -69,10 +75,10 @@ pub fn expression(expr: kast::Expression) -> Result<Box<sast::ValueExpression>, 
                 kast::Literal::Long(Some(v)) => sast::Literal::Integer(v),
                 kast::Literal::Real(Some(v)) => sast::Literal::Real(v),
                 kast::Literal::String(v) => sast::Literal::String(v),
-                _ => todo!()
+                _ => todo!(),
             };
             sast::ValueExpression::Literal { value: literal }
-        },
+        }
     };
 
     Ok(Box::new(value))

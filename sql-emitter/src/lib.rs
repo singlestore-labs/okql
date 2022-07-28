@@ -3,7 +3,7 @@
 
 pub mod ast;
 
-use std::fmt::{Write, Result as FResult};
+use std::fmt::{Result as FResult, Write};
 
 pub fn emit(select_stmt: &ast::SelectStatement) -> Result<String, String> {
     let mut printer = Printer::default();
@@ -17,7 +17,7 @@ pub fn emit(select_stmt: &ast::SelectStatement) -> Result<String, String> {
 #[derive(Default, Debug)]
 pub struct Printer {
     output: String,
-    indent: u32
+    indent: u32,
 }
 
 impl Printer {
@@ -52,12 +52,16 @@ impl Printer {
         Ok(())
     }
 
-    fn print_select(&mut self, modifier: &Option<ast::Modifier>, select: &ast::SelectList) -> FResult {
+    fn print_select(
+        &mut self,
+        modifier: &Option<ast::Modifier>,
+        select: &ast::SelectList,
+    ) -> FResult {
         self.start_line();
         match modifier {
             Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT ")?,
             Some(ast::Modifier::All) => write!(self.output, "SELECT ALL ")?,
-            None => write!(self.output, "SELECT ")?
+            None => write!(self.output, "SELECT ")?,
         };
         let mut first = true;
         if select.wildcard {
@@ -84,7 +88,7 @@ impl Printer {
                 self.start_line();
                 write!(self.output, "FROM {}", name)?;
                 self.end_line();
-            },
+            }
             ast::TableReference::InnerStatement { value } => {
                 self.start_line();
                 write!(self.output, "FROM (")?;
@@ -97,7 +101,7 @@ impl Printer {
                 self.start_line();
                 write!(self.output, ")")?;
                 self.end_line();
-            },
+            }
         }
         Ok(())
     }
@@ -128,20 +132,18 @@ impl Printer {
                 }
                 write!(self.output, ")")?;
                 Ok(())
-            },
+            }
             ast::ValueExpression::ArithmeticExpr { left, op, right } => {
                 self.print_val_expr(left)?;
                 write!(self.output, " {} ", op)?;
                 self.print_val_expr(right)?;
                 Ok(())
-            },
-            ast::ValueExpression::Literal { value } => {
-                match value {
-                    ast::Literal::Bool(v) => write!(self.output, "{}", v),
-                    ast::Literal::Integer(v) => write!(self.output, "{}", v),
-                    ast::Literal::Real(v) => write!(self.output, "{}", v),
-                    ast::Literal::String(v) => write!(self.output, "{}", v),
-                }
+            }
+            ast::ValueExpression::Literal { value } => match value {
+                ast::Literal::Bool(v) => write!(self.output, "{}", v),
+                ast::Literal::Integer(v) => write!(self.output, "{}", v),
+                ast::Literal::Real(v) => write!(self.output, "{}", v),
+                ast::Literal::String(v) => write!(self.output, "{}", v),
             },
         }
     }
@@ -163,15 +165,20 @@ mod tests {
             modifier: None,
             select: ast::SelectList {
                 wildcard: true,
-                columns: vec![]
+                columns: vec![],
             },
-            from: ast::TableReference::TableName { name: String::from("users") },
+            from: ast::TableReference::TableName {
+                name: String::from("users"),
+            },
             where_: None,
             order_by: None,
         };
 
         let mut printer = Printer::default();
         assert!(printer.print_query(&query).is_ok());
-        assert_eq!(String::from("SELECT *\nFROM users\n"), String::from(printer));
+        assert_eq!(
+            String::from("SELECT *\nFROM users\n"),
+            String::from(printer)
+        );
     }
 }

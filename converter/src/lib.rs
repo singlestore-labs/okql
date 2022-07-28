@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-
 use kql_parser::{ast as kast, parse, Error as KqlError};
 use miette::Report;
 use sql_emitter::{ast as sast, emit};

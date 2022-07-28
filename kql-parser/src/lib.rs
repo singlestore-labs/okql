@@ -4,22 +4,18 @@ use lexer::LexerError;
 use miette::NamedSource;
 use parser::ParserError;
 
-/// Miette Span Utilities
-pub mod spans;
-/// KQL Tokenizer/Lexer
-pub mod lexer;
 /// KQL Abstract Syntax Tree
 pub mod ast;
+/// KQL Tokenizer/Lexer
+pub mod lexer;
 /// KQL Parser
 pub mod parser;
+/// Miette Span Utilities
+pub mod spans;
 
 pub enum Error {
-    Lexer {
-        errors: Vec<LexerError>
-    },
-    Parser {
-        error: ParserError
-    }
+    Lexer { errors: Vec<LexerError> },
+    Parser { error: ParserError },
 }
 
 pub fn parse<SN: ToString, SC: ToString>(

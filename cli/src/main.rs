@@ -4,7 +4,7 @@ use converter::kql_to_sql;
 
 #[derive(Parser, Debug)]
 struct Arguments {
-    input: String
+    input: String,
 }
 
 fn main() {
