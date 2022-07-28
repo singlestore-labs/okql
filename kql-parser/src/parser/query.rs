@@ -237,6 +237,8 @@ fn parse_where(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
 
 #[cfg(test)]
 mod tests {
+    use miette::Report;
+
     use super::*;
     use crate::{parser::tests::make_input, spans::Span};
     use pretty_assertions::assert_eq;
@@ -244,11 +246,17 @@ mod tests {
     #[test]
     fn parse_summarize_supports_groupings() {
         let cases = [
-            ("summarize NumTransactions=count(), Total=sum(UnitPrice * NumUnits) by Fruit, StartOfMonth=startofmonth(SellDateTime)", Span::from((0, 124))),
+            ("NumTransactions=2, Total=foobar by Fruit, StartOfMonth", Span::from((0, 124))),
         ];
         for (source, span) in cases {
-            parse_summarize(&mut make_input(source)).unwrap();
-
+            let result = parse_summarize(&mut make_input(source));
+            match result {
+                Ok(_) => {},
+                Err(error) => {
+                    println!("{:?}", Report::new(error));
+                    panic!();
+                }
+            }
         }
     }
 }
