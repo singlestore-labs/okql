@@ -1,4 +1,4 @@
-use crate::ast::{self, ColumnDefinition};
+use crate::ast::{self, ColumnDefinition, Sorting};
 use crate::ast::query::{Query, TabularOperator, SortOrder, NullsPosition};
 use crate::lexer::Token;
 use crate::spans::{join_spans, span_precedes_span, M};
@@ -153,34 +153,60 @@ fn parse_column_definition(input: &mut ParseInput) -> Result<ColumnDefinition, P
 }
 
 fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
+    let mut sortings = Vec::new();
     let first_term = parse_term(input)?;
-    let mut span = first_term.span.clone();
     let by_kwd = match first_term.value.as_str() {
-        "by" => span,
+        "by" => first_term.span.clone(),
         _ => return Err(input.unexpected_token("Expected 'by' keyword"))
     };
+    loop {
+        let checkpoint = input.checkpoint();
 
-    let expr = parse_expression(input)?;
+        let column = match parse_term(input) {
+            Ok(column) => column,
+            Err(_) => {
+                input.restore(checkpoint);
+                break;
+            },
+        };
 
-    let second_term = parse_term(input)?;
-    let order = match second_term.value.as_str() {
-        "asc" => Some(M::new(SortOrder::Ascending, second_term.span.clone())),
-        "desc" => Some(M::new( SortOrder::Descending, second_term.span.clone())),
-        _ => None
-    };
+        let order_term = parse_term(input)?;
+        let order = match order_term.value.as_str() {
+            "asc" => Some(M::new(SortOrder::Ascending, order_term.span.clone())),
+            "desc" => Some(M::new( SortOrder::Descending, order_term.span.clone())),
+            _ => None
+        };
+    
+        let nulls_kwd = parse_term(input)?;
+        let nulls_pos = match nulls_kwd.value.as_str() {
+            "nulls" => parse_term(input)?,
+            _ => {
+                input.restore(checkpoint);
+                break;
+            }
+        };
 
-    let nulls_kwd = parse_term(input)?;
-    let nulls_pos = match nulls_kwd.value.as_str() {
-        "nulls" => parse_term(input)?,
-        _ => return Err(input.unexpected_token("Unknown keyword"))
-    };
-    let nulls = match nulls_pos.value.as_str() {
-        "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
-        "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
-        _ => None
-    };
+        let nulls = match nulls_pos.value.as_str() {
+            "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
+            "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
+            _ => {
+                input.restore(checkpoint);
+                break;
+            }
+        };
+    
+        let sorting = Sorting { column, order, nulls };
 
-    Ok(TabularOperator::Sort { by_kwd, expr, order, nulls })
+
+        sortings.push(sorting);
+
+
+        if input.next_if(Token::Comma).is_none() {
+            break;
+        }
+    }
+
+    Ok(TabularOperator::Sort { by_kwd, sortings })
 }
 
 fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {

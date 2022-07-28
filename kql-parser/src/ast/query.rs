@@ -46,12 +46,8 @@ pub enum TabularOperator {
     Sort {
         /// Span for by keyword
         by_kwd: Span,
-        /// The expression to sort on
-        expr: MBox<Expression>,
-        /// Ascending or descending
-        order: Option<M<SortOrder>>,
-        // Span of `nulls` keyword, value for `first`|`last`
-        nulls: Option<(Span, M<NullsPosition>)>,
+        /// Sortings to be performed
+        sortings: Vec<Sorting>
     },
     Summarize {
         result_columns: Vec<ColumnDefinition>,
@@ -161,6 +157,16 @@ pub enum JoinAttribute {
 pub struct ColumnDefinition {
     pub column: M<String>,
     pub expr: Option<MBox<Expression>>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Sorting {
+    /// The column to sort by
+    pub column: M<String>,
+    /// Ascending or descending
+    pub order: Option<M<SortOrder>>,
+    // Span of `nulls` keyword, value for `first`|`last`
+    pub nulls: Option<(Span, M<NullsPosition>)>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
