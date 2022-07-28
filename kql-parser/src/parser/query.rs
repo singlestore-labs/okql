@@ -1,4 +1,4 @@
-use crate::ast::query::{Query, TabularOperator, SortOrder, NullsPosition};
+use crate::ast::query::{NullsPosition, Query, SortOrder, TabularOperator};
 use crate::ast::{self, ColumnDefinition, Sorting};
 
 use crate::lexer::Token;
@@ -149,12 +149,12 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let first_term = parse_term(input)?;
     let by_kwd = match first_term.value.as_str() {
         "by" => first_term.span.clone(),
-        _ => return Err(input.unexpected_token("Expected 'by' keyword"))
+        _ => return Err(input.unexpected_token("Expected 'by' keyword")),
     };
     loop {
         let column = match parse_term(input) {
             Ok(column) => column,
-            Err(_) => return Err(input.unexpected_token("Expected column name"))
+            Err(_) => return Err(input.unexpected_token("Expected column name")),
         };
 
         let checkpoint = input.checkpoint();
@@ -162,7 +162,7 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
         let order_term = parse_term(input)?;
         let order = match order_term.value.as_str() {
             "asc" => Some(M::new(SortOrder::Ascending, order_term.span.clone())),
-            "desc" => Some(M::new( SortOrder::Descending, order_term.span.clone())),
+            "desc" => Some(M::new(SortOrder::Descending, order_term.span.clone())),
             _ => {
                 input.restore(checkpoint);
                 None
@@ -176,9 +176,15 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
             "nulls" => {
                 let nulls_pos = parse_term(input)?;
                 match nulls_pos.value.as_str() {
-                    "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
-                    "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
-                    _ => return Err(input.unexpected_token("Expected nulls position"))
+                    "first" => Some((
+                        nulls_kwd.span.clone(),
+                        M::new(NullsPosition::First, nulls_pos.span.clone()),
+                    )),
+                    "last" => Some((
+                        nulls_kwd.span.clone(),
+                        M::new(NullsPosition::Last, nulls_pos.span.clone()),
+                    )),
+                    _ => return Err(input.unexpected_token("Expected nulls position")),
                 }
             }
             _ => {
@@ -187,7 +193,11 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
             }
         };
 
-        let sorting = Sorting { column, order, nulls };
+        let sorting = Sorting {
+            column,
+            order,
+            nulls,
+        };
 
         sortings.push(sorting);
 
@@ -211,7 +221,7 @@ fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserErro
     let next_term = parse_term(input)?;
     let by_kwd = match next_term.value.as_str() {
         "by" => next_term.span.clone(),
-        _ => return Err(input.unexpected_token("Expected 'by' keyword"))
+        _ => return Err(input.unexpected_token("Expected 'by' keyword")),
     };
 
     let mut grouping_columns: Vec<ColumnDefinition> = Vec::new();
@@ -221,7 +231,11 @@ fn parse_summarize(input: &mut ParseInput) -> Result<TabularOperator, ParserErro
         grouping_columns.push(parse_column_definition(input)?);
     }
 
-    Ok(TabularOperator::Summarize { result_columns, by_kwd, grouping_columns })
+    Ok(TabularOperator::Summarize {
+        result_columns,
+        by_kwd,
+        grouping_columns,
+    })
 }
 
 fn parse_top(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
@@ -238,22 +252,18 @@ mod tests {
     use miette::Report;
 
     use super::*;
-    use crate::{parser::tests::make_input, spans::Span};
+    use crate::parser::tests::make_input;
     use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_summarize_supports_groupings() {
-        let cases = [
-            ("NumTransactions=2, Total=foobar by Fruit, StartOfMonth", Span::from((0, 124))),
-        ];
-        for (source, span) in cases {
-            let result = parse_summarize(&mut make_input(source));
-            match result {
-                Ok(_) => {},
-                Err(error) => {
-                    println!("{:?}", Report::new(error));
-                    panic!();
-                }
+        let source = "NumTransactions=2, Total=foobar by Fruit, StartOfMonth";
+        let result = parse_summarize(&mut make_input(source));
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                println!("{:?}", Report::new(error));
+                panic!();
             }
         }
     }

@@ -157,14 +157,14 @@ impl Printer {
                 write!(self.output, " {} ", op)?;
                 self.print_search_condition(right)?;
                 write!(self.output, ")")?;
-            },
+            }
             ast::SearchCondition::ComparisonExpr { left, op, right } => {
                 write!(self.output, "(")?;
                 self.print_val_expr(left)?;
                 write!(self.output, " {} ", op)?;
                 self.print_val_expr(right)?;
                 write!(self.output, ")")?;
-            },
+            }
         }
         Ok(())
     }

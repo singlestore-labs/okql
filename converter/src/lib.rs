@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use kql_parser::{ast as kast, parse, Error as KqlError, spans::Span};
+use kql_parser::{ast as kast, parse, spans::Span, Error as KqlError};
 use miette::Report;
 use sql_emitter::{ast as sast, emit};
 use std::{fmt::Write, sync::Arc};
@@ -29,7 +29,6 @@ pub fn kql_to_sql(source_name: String, kql: String) -> Result<String, String> {
         }
     };
 
-
     let sql_ast = match convert(src, kql_ast) {
         Ok(result) => result,
         Err(error) => return Err(format!("{:?}", Report::new(error))),
@@ -38,7 +37,10 @@ pub fn kql_to_sql(source_name: String, kql: String) -> Result<String, String> {
     emit(&sql_ast)
 }
 
-pub fn convert(src: Arc<NamedSource>, query: kast::Query) -> Result<sast::SelectStatement, ConverterError> {
+pub fn convert(
+    src: Arc<NamedSource>,
+    query: kast::Query,
+) -> Result<sast::SelectStatement, ConverterError> {
     let mut merger = merger::Merger::new(src);
     let mut head = sast::SelectStatement::simple(query.table.value);
 

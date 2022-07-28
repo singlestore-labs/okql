@@ -47,7 +47,7 @@ pub enum TabularOperator {
         /// Span for by keyword
         by_kwd: Span,
         /// Sortings to be performed
-        sortings: Vec<Sorting>
+        sortings: Vec<Sorting>,
     },
     Summarize {
         result_columns: Vec<ColumnDefinition>,
