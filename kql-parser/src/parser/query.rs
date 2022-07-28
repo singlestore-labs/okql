@@ -168,9 +168,9 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
                 None
             }
         };
-        
+
         let checkpoint = input.checkpoint();
-        
+
         let nulls_kwd = parse_term(input)?;
         let nulls = match nulls_kwd.value.as_str() {
             "nulls" => {
@@ -186,12 +186,10 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
                 None
             }
         };
-    
+
         let sorting = Sorting { column, order, nulls };
 
-
         sortings.push(sorting);
-
 
         if input.next_if(Token::Comma).is_none() {
             break;
