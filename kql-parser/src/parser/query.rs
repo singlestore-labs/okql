@@ -165,24 +165,25 @@ fn parse_sort(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
             "desc" => Some(M::new( SortOrder::Descending, order_term.span.clone())),
             _ => {
                 input.restore(checkpoint);
-                break;
+                None
             }
         };
         
         let checkpoint = input.checkpoint();
         
         let nulls_kwd = parse_term(input)?;
-        let nulls_pos = match nulls_kwd.value.as_str() {
-            "nulls" => parse_term(input)?,
-            _ => {
-                input.restore(checkpoint);
-                break;
+        let nulls = match nulls_kwd.value.as_str() {
+            "nulls" => {
+                let nulls_pos = parse_term(input)?;
+                match nulls_pos.value.as_str() {
+                    "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
+                    "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
+                    _ => {
+                        input.restore(checkpoint);
+                        None
+                    }
+                }
             }
-        };
-
-        let nulls = match nulls_pos.value.as_str() {
-            "first" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::First, nulls_pos.span.clone()))),
-            "last" => Some((nulls_kwd.span.clone(), M::new(NullsPosition::Last, nulls_pos.span.clone()))),
             _ => {
                 input.restore(checkpoint);
                 break;
