@@ -32,7 +32,7 @@ pub fn kql_to_sql(source_name: String, kql: String) -> Result<String, String> {
 
     let sql_ast = match convert(src, kql_ast) {
         Ok(result) => result,
-        Err(_) => todo!(),
+        Err(error) => return Err(format!("{:?}", Report::new(error))),
     };
 
     emit(&sql_ast)
