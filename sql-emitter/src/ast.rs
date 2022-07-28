@@ -1,3 +1,5 @@
+use std::fmt;
+
 
 pub struct SelectStatement {
     pub modifier: Option<Modifier>,
@@ -80,17 +82,31 @@ pub enum ValueExpression {
     },
     FuncCall {
         name: String,
-        args: Vec<ValueExpression>
+        args: Vec<Box<ValueExpression>>
     },
     ArithmeticExpr {
         left: Box<ValueExpression>,
         op: ArithmeticOperator,
         right: Box<ValueExpression>
+    },
+    Literal {
+        value: Literal
     }
 }
 
 pub enum ArithmeticOperator {
     Add, Sub, Mul, Div
+}
+
+impl fmt::Display for ArithmeticOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ArithmeticOperator::Add => write!(f, "+"),
+            ArithmeticOperator::Sub => write!(f, "-"),
+            ArithmeticOperator::Mul => write!(f, "*"),
+            ArithmeticOperator::Div => write!(f, "/"),
+        }
+    }
 }
 
 pub struct OrderByClause {
@@ -105,4 +121,11 @@ pub struct SortSpecification {
 pub enum SortOrder {
     Ascending,
     Descending
+}
+
+pub enum Literal {
+    Bool(bool),
+    Integer(i64),
+    Real(f64),
+    String(String)
 }

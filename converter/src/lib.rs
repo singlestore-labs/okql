@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
+
 use kql_parser::{ast as kast, parse, Error as KqlError};
 use miette::Report;
 use sql_emitter::{ast as sast, emit};
@@ -31,11 +35,11 @@ pub fn kql_to_sql(source_name: String, kql: String) -> Result<String, String> {
 
 pub enum ConverterError {}
 
-pub fn convert(kquery: kast::Query) -> Result<sast::SelectStatement, ConverterError> {
+pub fn convert(query: kast::Query) -> Result<sast::SelectStatement, ConverterError> {
     let mut state = MergeState::default();
-    let mut head = sast::SelectStatement::simple(kquery.table.value);
+    let mut head = sast::SelectStatement::simple(query.table.value);
 
-    for (_, operator) in kquery.operators {
+    for (_, operator) in query.operators {
         (state, head) = apply_operator(state, head, operator)?;
     }
 

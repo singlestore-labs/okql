@@ -54,7 +54,18 @@ fn parse_leaf(input: &mut ParseInput) -> Result<MBox<Expression>, ParserError> {
     input.restore(checkpoint);
     if let Ok(term) = parse_term(input) {
         let span = term.span.clone();
-        return Ok(MBox::new(Expression::Identifier { name: term }, span));
+        if let Some(open_paren_sym) = input.next_if(Token::LParen) {
+            let mut args = Vec::new();
+            args.push(parse_expression(input)?);
+            while input.next_if(Token::Comma).is_some() {
+                args.push(parse_expression(input)?);
+            }
+            let close_paren_sym = input.assert_next(Token::RParen, "No closing parenthesis for function call")?;
+            let end_span = close_paren_sym.clone();
+            return Ok(MBox::new_range(Expression::FuncCall { name: term, open_paren_sym, args, close_paren_sym }, span, end_span))
+        } else {
+            return Ok(MBox::new(Expression::Identifier { name: term }, span));
+        }
     }
     // advance so that error is generated on the correct token
     let _ = input.next();

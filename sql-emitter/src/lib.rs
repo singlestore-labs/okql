@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 pub mod ast;
 
 use std::fmt::{Write, Result as FResult};
@@ -113,8 +116,33 @@ impl Printer {
     fn print_val_expr(&mut self, expr: &ast::ValueExpression) -> FResult {
         match expr {
             ast::ValueExpression::Column { name } => write!(self.output, "{}", name),
-            ast::ValueExpression::FuncCall { name, args } => todo!(),
-            ast::ValueExpression::ArithmeticExpr { left, op, right } => todo!(),
+            ast::ValueExpression::FuncCall { name, args } => {
+                write!(self.output, "{}(", name)?;
+                let mut first = true;
+                for arg in args.iter() {
+                    if !first {
+                        write!(self.output, ", ")?;
+                    }
+                    self.print_val_expr(arg)?;
+                    first = false;
+                }
+                write!(self.output, ")")?;
+                Ok(())
+            },
+            ast::ValueExpression::ArithmeticExpr { left, op, right } => {
+                self.print_val_expr(left)?;
+                write!(self.output, " {} ", op)?;
+                self.print_val_expr(right)?;
+                Ok(())
+            },
+            ast::ValueExpression::Literal { value } => {
+                match value {
+                    ast::Literal::Bool(v) => write!(self.output, "{}", v),
+                    ast::Literal::Integer(v) => write!(self.output, "{}", v),
+                    ast::Literal::Real(v) => write!(self.output, "{}", v),
+                    ast::Literal::String(v) => write!(self.output, "{}", v),
+                }
+            },
         }
     }
 }
