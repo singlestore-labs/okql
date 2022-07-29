@@ -101,6 +101,22 @@ fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> 
     Err(input.unsupported_error("extend operator"))
 }
 
+fn parse_join_kind(input: &mut ParseInput) -> Result<JoinKind, ParserError> {
+    let term = parse_term(input)?;
+    match term.value.as_str() {
+        "innerunique" => Ok(JoinKind::InnerUnique),
+        "inner" => Ok(JoinKind::Inner),
+        "leftouter" => Ok(JoinKind::LeftOuter),
+        "rightouter" => Ok(JoinKind::RightOuter),
+        "fullouter" => Ok(JoinKind::FullOuter),
+        "leftanti" => Ok(JoinKind::LeftAnti),
+        "rightanti" => Ok(JoinKind::RightAnti),
+        "leftsemi" => Ok(JoinKind::LeftSemi),
+        "rightsemi" => Ok(JoinKind::RightSemi),
+        _ => return Err(input.unexpected_token("Expected join parameter or '(table_name)'")),
+    }
+}
+
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let checkpoint = input.checkpoint();
 
@@ -108,19 +124,7 @@ fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
         input.restore(checkpoint);
         None
     } else {
-        let first_term = parse_term(input)?;
-        match first_term.value.as_str() {
-            "innerunique" => Some(JoinKind::InnerUnique),
-            "inner" => Some(JoinKind::Inner),
-            "leftouter" => Some(JoinKind::LeftOuter),
-            "rightouter" => Some(JoinKind::RightOuter),
-            "fullouter" => Some(JoinKind::FullOuter),
-            "leftanti" => Some(JoinKind::LeftAnti),
-            "rightanti" => Some(JoinKind::RightAnti),
-            "leftsemi" => Some(JoinKind::LeftSemi),
-            "rightsemi" => Some(JoinKind::RightSemi),
-            _ => return Err(input.unexpected_token("Expected join parameter or '(table_name)'")),
-        }
+        Some(parse_join_kind(input)?)
     };
         
     let params = JoinParams { kind };
