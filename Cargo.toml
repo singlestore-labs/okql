@@ -3,5 +3,6 @@ members = [
     "kql-parser",
     "sql-emitter",
     "converter",
+    "converter-wasm",
     "cli"
 ]
