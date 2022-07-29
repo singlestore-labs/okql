@@ -20,7 +20,7 @@ impl SelectStatement {
             from: TableReference::TableName { name: table },
             where_: None,
             order_by: None,
-            limit: None
+            limit: None,
         }
     }
 
@@ -36,7 +36,7 @@ impl SelectStatement {
             },
             where_: None,
             order_by: None,
-            limit: None
+            limit: None,
         }
     }
 }

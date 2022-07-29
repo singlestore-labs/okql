@@ -205,7 +205,7 @@ mod tests {
             },
             where_: None,
             order_by: None,
-            limit: None
+            limit: None,
         };
 
         let mut printer = Printer::default();

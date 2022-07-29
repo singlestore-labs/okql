@@ -1,5 +1,5 @@
 use kql_parser::{
-    ast as kast,
+    ast::{self as kast, ColumnDefinition},
     spans::{MBox, Span, M},
 };
 use sql_emitter::ast as sast;
@@ -72,7 +72,20 @@ impl Merger {
             }
 
             kast::TabularOperator::Extend { columns } => {
-                self.not_yet_implemented(name.span, "extend operator")
+                if self.columns != ColumnsState::Unmodified {
+                    head = sast::SelectStatement::simple_wrapping(head);
+                }
+
+                self.columns = Merger::get_column_state(&columns);
+
+                let sql_columns: Vec<sast::SelectColumn> = columns
+                    .into_iter()
+                    .map(|col| self.to_select_column(col))
+                    .collect::<Result<Vec<sast::SelectColumn>, ConverterError>>()?;
+
+                head.select.columns.extend(sql_columns);
+
+                Ok((self, head))
             }
 
             kast::TabularOperator::Join {
@@ -91,17 +104,8 @@ impl Merger {
 
             kast::TabularOperator::Project { columns } => {
                 // Compute column state
-                let (retained, modified): (Vec<_>, Vec<_>) =
-                    columns.iter().partition(|col| col.expr.is_none());
-                let retained: Vec<String> = retained
-                    .into_iter()
-                    .map(|col| col.column.value.clone())
-                    .collect();
-                let modified: Vec<String> = modified
-                    .into_iter()
-                    .map(|col| col.column.value.clone())
-                    .collect();
-                let column_state = ColumnsState::Modified { retained, modified };
+                let column_state = Merger::get_column_state(&columns);
+
                 // Compute SQL columns
                 let new_columns: Vec<sast::SelectColumn> = columns
                     .into_iter()
@@ -303,5 +307,25 @@ impl Merger {
             },
         };
         Ok(Box::new(cond))
+    }
+
+    fn get_column_state(columns: &Vec<ColumnDefinition>) -> ColumnsState {
+        let (retained, modified): (Vec<_>, Vec<_>) =
+            columns.iter().partition(|col| col.expr.is_none());
+
+        let retained: Vec<String> = retained
+            .into_iter()
+            .map(|col| col.column.value.clone())
+            .collect();
+        let modified: Vec<String> = modified
+            .into_iter()
+            .map(|col| col.column.value.clone())
+            .collect();
+
+        if modified.is_empty() {
+            ColumnsState::Limited { columns: retained }
+        } else {
+            ColumnsState::Modified { retained, modified }
+        }
     }
 }

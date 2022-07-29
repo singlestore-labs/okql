@@ -20,7 +20,7 @@ pub enum ParserError {
         #[source_code]
         src: Arc<NamedSource>,
         #[label("Here")]
-        span: Span
+        span: Span,
     },
     #[diagnostic()]
     #[error("Failed to parse: {message}")]
