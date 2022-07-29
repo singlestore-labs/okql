@@ -368,4 +368,17 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn parse_join_supports_kind() {
+        let source = "rightouter (Table) on $left.Col1 == $right.Col2";
+        let result = parse_join(&mut make_input(source));
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                println!("{:?}", Report::new(error));
+                panic!();
+            }
+        }
+    }
 }
