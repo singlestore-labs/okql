@@ -59,17 +59,19 @@ impl Printer {
     ) -> FResult {
         self.start_line();
         match modifier {
-            Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT ")?,
-            Some(ast::Modifier::All) => write!(self.output, "SELECT ALL ")?,
-            None => write!(self.output, "SELECT ")?,
+            Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT")?,
+            Some(ast::Modifier::All) => write!(self.output, "SELECT ALL")?,
+            None => write!(self.output, "SELECT")?,
         };
         let mut first = true;
         if select.wildcard {
-            write!(self.output, "* ")?;
+            write!(self.output, " *")?;
             first = false;
         }
         for field in select.columns.iter() {
-            if !first {
+            if first {
+                write!(self.output, " ")?;
+            } else {
                 write!(self.output, ", ")?;
             }
             self.print_val_expr(&field.value)?;
