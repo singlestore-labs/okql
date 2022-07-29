@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn parse_join_supports_attributes() {
         let source = "(Table2) on CommonColumn, $left.Col1 == $right.Col2";
-        let result = parse_summarize(&mut make_input(source));
+        let result = parse_join(&mut make_input(source));
         match result {
             Ok(_) => {}
             Err(error) => {
