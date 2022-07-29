@@ -1,5 +1,8 @@
+use std::assert_matches::debug_assert_matches;
+use std::sync::Arc;
+
 use crate::ast::query::{NullsPosition, Query, SortOrder, TabularOperator};
-use crate::ast::{self, ColumnDefinition, Sorting};
+use crate::ast::{self, ColumnDefinition, Sorting, JoinParams, JoinKind, JoinAttribute};
 
 use crate::lexer::Token;
 use crate::spans::{join_spans, span_precedes_span, M};
@@ -103,7 +106,65 @@ fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> 
 }
 
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("join operator"))
+    let checkpoint = input.checkpoint();
+
+    let first_term = parse_term(input)?;
+    let kind = match first_term.value.as_str() {
+        "innerunique" => Some(JoinKind::InnerUnique),
+        "inner" => Some(JoinKind::Inner),
+        "leftouter" => Some(JoinKind::LeftOuter),
+        "rightouter" => Some(JoinKind::RightOuter),
+        "fullouter" => Some(JoinKind::FullOuter),
+        "leftanti" => Some(JoinKind::LeftAnti),
+        "rightanti" => Some(JoinKind::RightAnti),
+        "leftsemi" => Some(JoinKind::LeftSemi),
+        "rightsemi" => Some(JoinKind::RightSemi),
+        _ => {
+            input.restore(checkpoint);
+            None
+        }
+    };
+    let params = JoinParams { kind };
+    if input.next_if(Token::LParen).is_none() {
+        return Err(input.unexpected_token("Expected left paranthesis before table name"));
+    };
+
+    let table_name = parse_term(input)?;
+    let right_table = Box::new(Query { table: table_name, operators: None });
+
+    if input.next_if(Token::LParen).is_none() {
+        return Err(input.unexpected_token("Expected right paranthesis after table name"));
+    };
+
+    let mut attributes = Vec::new();
+
+    loop {
+        let next_term = parse_term(input)?;
+
+        let attribute = if input.next_if(Token::DollarTerm(String::from("left"))).is_some() {
+            let left_kwd: Span,
+            let left_name: M<String>,
+            let right_kwd: Span,
+            let right_name: M<String>,
+            JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name };
+        } else if input.next_if(Token::DollarTerm(String::from("right"))).is_some() {
+            let left_kwd: Span,
+            let left_name: M<String>,
+            let right_kwd: Span,
+            let right_name: M<String>,
+            JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name };
+        } else {
+            JoinAttribute::Matching{ name: next_term };
+        };
+
+        attributes.push(attribute);
+
+        if input.next_if(Token::Comma).is_none() {
+            break;
+        }
+    };
+
+    Ok(TabularOperator::Join { params, right_table, attributes })
 }
 
 fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
