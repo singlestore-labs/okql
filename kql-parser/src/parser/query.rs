@@ -21,7 +21,7 @@ fn parse_operators(
 ) -> Result<Vec<(M<String>, TabularOperator)>, ParserError> {
     let mut operators = Vec::new();
 
-    while !input.done() {
+    while input.next_if(Token::Pipe).is_some() {
         operators.push(parse_operator(input)?);
     }
 
@@ -29,8 +29,6 @@ fn parse_operators(
 }
 
 fn parse_operator(input: &mut ParseInput) -> Result<(M<String>, TabularOperator), ParserError> {
-    input.assert_next(Token::Pipe, "Tabular operators begin with pipe")?;
-
     let operator_name = parse_kebab_term(input)?;
 
     let operator = match operator_name.value.as_str() {
