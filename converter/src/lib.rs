@@ -44,8 +44,8 @@ pub fn convert(
     let mut merger = merger::Merger::new(src);
     let mut head = sast::SelectStatement::simple(query.table.value);
 
-    for (_, operator) in query.operators {
-        (merger, head) = merger.merge_operator(head, operator)?;
+    for (name, operator) in query.operators {
+        (merger, head) = merger.merge_operator(head, name, operator)?;
     }
 
     Ok(head)
@@ -60,5 +60,14 @@ pub enum ConverterError {
         src: Arc<NamedSource>,
         #[label("Non-condition expression")]
         span: Span,
+    },
+    #[diagnostic()]
+    #[error("{feature} not yet implemented")]
+    NotImplemented {
+        #[source_code]
+        src: Arc<NamedSource>,
+        #[label("Here")]
+        span: Span,
+        feature: String,
     },
 }

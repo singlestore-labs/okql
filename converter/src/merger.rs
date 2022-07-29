@@ -1,6 +1,6 @@
 use kql_parser::{
     ast as kast,
-    spans::{MBox, Span},
+    spans::{MBox, Span, M},
 };
 use sql_emitter::ast as sast;
 
@@ -14,8 +14,6 @@ use crate::ConverterError;
 pub struct Merger {
     src: Arc<NamedSource>,
     columns: ColumnsState,
-    filtered: bool,
-    limit: Option<i64>,
 }
 
 #[derive(PartialEq, Default, Debug)]
@@ -36,14 +34,11 @@ impl Merger {
         Merger {
             src,
             columns: ColumnsState::Unmodified,
-            filtered: false,
-            limit: None,
         }
     }
 
-    fn reset_status(&mut self) {
+    fn reset_columns(&mut self) {
         self.columns = ColumnsState::default();
-        self.limit = None;
     }
 
     fn non_condition_expression(&self, span: Span) -> ConverterError {
@@ -53,26 +48,46 @@ impl Merger {
         }
     }
 
+    fn not_yet_implemented<T>(&self, span: Span, feature: &str) -> Result<T, ConverterError> {
+        Err(ConverterError::NotImplemented {
+            src: self.src.clone(),
+            feature: feature.to_string(),
+            span,
+        })
+    }
+
     /// Takes a SELECT statement and either modifies it to include the provided operator
     /// or creates a new SELECT statement wrapping the old one which does.
     pub fn merge_operator(
         mut self,
         mut head: sast::SelectStatement,
+        name: M<String>,
         operator: kast::TabularOperator,
     ) -> Result<(Self, sast::SelectStatement), ConverterError> {
         match operator {
-            kast::TabularOperator::Count => todo!(),
+            kast::TabularOperator::Count => self.not_yet_implemented(name.span, "count operator"),
 
-            kast::TabularOperator::Distinct { columns } => todo!(),
+            kast::TabularOperator::Distinct { columns } => {
+                self.not_yet_implemented(name.span, "distinct operator")
+            }
 
-            kast::TabularOperator::Extend { columns } => todo!(),
+            kast::TabularOperator::Extend { columns } => {
+                self.not_yet_implemented(name.span, "extend operator")
+            }
 
             kast::TabularOperator::Join {
                 params,
                 right_table,
                 attributes,
-            } => todo!(),
-            kast::TabularOperator::Limit { limit } => todo!(),
+            } => self.not_yet_implemented(name.span, "join operator"),
+
+            kast::TabularOperator::Limit { limit } => {
+                if head.limit.is_some() {
+                    head = sast::SelectStatement::simple_wrapping(head);
+                }
+                head.limit = Some(limit.value);
+                Ok((self, head))
+            }
 
             kast::TabularOperator::Project { columns } => {
                 // Compute column state
@@ -103,29 +118,23 @@ impl Merger {
                     Ok((self, head))
                 } else {
                     self.columns = column_state;
-                    self.limit = None;
-                    let new_head = sast::SelectStatement {
-                        modifier: None,
-                        select: sast::SelectList {
-                            wildcard: false,
-                            columns: new_columns,
-                        },
-                        from: sast::TableReference::InnerStatement {
-                            value: Box::new(head),
-                        },
-                        where_: None,
-                        order_by: None,
+                    let mut new_head = sast::SelectStatement::simple_wrapping(head);
+                    new_head.select = sast::SelectList {
+                        wildcard: false,
+                        columns: new_columns,
                     };
                     Ok((self, new_head))
                 }
             }
-            kast::TabularOperator::Sort { by_kwd, sortings } => todo!(),
+            kast::TabularOperator::Sort { by_kwd, sortings } => {
+                self.not_yet_implemented(name.span, "sort operator")
+            }
 
             kast::TabularOperator::Summarize {
                 result_columns,
                 by_kwd,
                 grouping_columns,
-            } => todo!(),
+            } => self.not_yet_implemented(name.span, "summarize operator"),
 
             kast::TabularOperator::Top {
                 limit,
@@ -133,11 +142,11 @@ impl Merger {
                 expr,
                 order,
                 nulls,
-            } => todo!(),
+            } => self.not_yet_implemented(name.span, "top operator"),
 
             kast::TabularOperator::Where { expr } => {
                 let cond = self.to_search_condition(expr)?;
-                let needs_wrapping = self.filtered
+                let needs_wrapping = head.where_.is_some()
                     || if let ColumnsState::Modified { modified, .. } = &self.columns {
                         cond.depends_on_any(&modified)
                     } else {

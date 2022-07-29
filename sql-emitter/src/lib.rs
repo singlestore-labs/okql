@@ -49,6 +49,9 @@ impl Printer {
         if let Some(order) = &select_stmt.order_by {
             self.print_order_by(&order)?;
         }
+        if let Some(limit) = &select_stmt.limit {
+            self.print_limit(*limit)?;
+        }
         Ok(())
     }
 
@@ -118,6 +121,13 @@ impl Printer {
 
     fn print_order_by(&mut self, cond: &ast::OrderByClause) -> FResult {
         todo!()
+    }
+
+    fn print_limit(&mut self, limit: i64) -> FResult {
+        self.start_line();
+        write!(self.output, "LIMIT {}", limit)?;
+        self.end_line();
+        Ok(())
     }
 
     fn print_val_expr(&mut self, expr: &ast::ValueExpression) -> FResult {
@@ -195,6 +205,7 @@ mod tests {
             },
             where_: None,
             order_by: None,
+            limit: None
         };
 
         let mut printer = Printer::default();
