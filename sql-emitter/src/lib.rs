@@ -156,7 +156,7 @@ impl Printer {
                 ast::Literal::Bool(v) => write!(self.output, "{}", v),
                 ast::Literal::Integer(v) => write!(self.output, "{}", v),
                 ast::Literal::Real(v) => write!(self.output, "{}", v),
-                ast::Literal::String(v) => write!(self.output, "{}", v),
+                ast::Literal::String(v) => write!(self.output, "\"{}\"", v),
             },
         }
     }

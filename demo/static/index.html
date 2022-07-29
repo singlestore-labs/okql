@@ -39,7 +39,10 @@ body {
       <div class='area'>
         <h1>Input <code>*.kql</code></h1>
         <div class='editor' id='input'>
-          <textarea id='input-raw'>foobar | project a, b=2 | where 2 > a | project c=max(a,b)+2.5+1*2, b</textarea>
+          <textarea id='input-raw'>StormEvents
+| where StartTime > now
+| where EventType == "Flood" and State == "CALIFORNIA"
+| project StartTime, EndTime, State, EventType, EpisodeNarrative</textarea>
         </div>
       </div>
       <div class='area'>

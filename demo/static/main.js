@@ -17,7 +17,7 @@ ktos.instantiate(fetch('./converter_wasm.wasm'), imports)
         const output_area = document.getElementById('output-raw');
 
         const update = () => {
-            const kql = input_area.value;
+            const kql = input_area.value.replace("\r\n", "\n");
             const result = ktos.convert(kql);
             if (result.tag === 'ok') {
                 output_area.value = result.val;
