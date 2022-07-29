@@ -169,6 +169,14 @@ fn parse_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
     }
 }
 
+fn parse_dollar_term(input: &mut ParseInput) -> Result<M<String>, ParserError> {
+    let token = input.next()?;
+    match token.value.clone() {
+        Token::DollarTerm(s) => Ok(M::new(s, token.span.clone())),
+        _ => Err(input.unexpected_token("Dollar term expected")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

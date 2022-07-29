@@ -1,6 +1,3 @@
-use std::assert_matches::debug_assert_matches;
-use std::sync::Arc;
-
 use crate::ast::query::{NullsPosition, Query, SortOrder, TabularOperator};
 use crate::ast::{self, ColumnDefinition, Sorting, JoinParams, JoinKind, JoinAttribute};
 
@@ -10,6 +7,7 @@ use crate::spans::{join_spans, span_precedes_span, M};
 use crate::parser::{parse_term, ParseInput, ParserError};
 
 use super::expression::parse_expression;
+use super::parse_dollar_term;
 
 pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
     let table = parse_term(input)?;
@@ -108,53 +106,85 @@ fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> 
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let checkpoint = input.checkpoint();
 
-    let first_term = parse_term(input)?;
-    let kind = match first_term.value.as_str() {
-        "innerunique" => Some(JoinKind::InnerUnique),
-        "inner" => Some(JoinKind::Inner),
-        "leftouter" => Some(JoinKind::LeftOuter),
-        "rightouter" => Some(JoinKind::RightOuter),
-        "fullouter" => Some(JoinKind::FullOuter),
-        "leftanti" => Some(JoinKind::LeftAnti),
-        "rightanti" => Some(JoinKind::RightAnti),
-        "leftsemi" => Some(JoinKind::LeftSemi),
-        "rightsemi" => Some(JoinKind::RightSemi),
-        _ => {
-            input.restore(checkpoint);
-            None
+    let kind = if input.next_if(Token::LParen).is_some() {
+        input.restore(checkpoint);
+        None
+    } else {
+        let first_term = parse_term(input)?;
+        match first_term.value.as_str() {
+            "innerunique" => Some(JoinKind::InnerUnique),
+            "inner" => Some(JoinKind::Inner),
+            "leftouter" => Some(JoinKind::LeftOuter),
+            "rightouter" => Some(JoinKind::RightOuter),
+            "fullouter" => Some(JoinKind::FullOuter),
+            "leftanti" => Some(JoinKind::LeftAnti),
+            "rightanti" => Some(JoinKind::RightAnti),
+            "leftsemi" => Some(JoinKind::LeftSemi),
+            "rightsemi" => Some(JoinKind::RightSemi),
+            _ => return Err(input.unexpected_token("Expected join parameter or '(table_name)'")),
         }
     };
+        
     let params = JoinParams { kind };
-    if input.next_if(Token::LParen).is_none() {
+
+    let lparen = input.next()?;
+    if lparen.value != Token::LParen {
         return Err(input.unexpected_token("Expected left paranthesis before table name"));
     };
 
-    let table_name = parse_term(input)?;
-    let right_table = Box::new(Query { table: table_name, operators: None });
+    let table_query = parse_query(input)?;
+    let right_table = Box::new(table_query);
 
-    if input.next_if(Token::LParen).is_none() {
+    let rparen = input.next()?;
+    if rparen.value != Token::RParen {
         return Err(input.unexpected_token("Expected right paranthesis after table name"));
     };
 
     let mut attributes = Vec::new();
 
     loop {
-        let next_term = parse_term(input)?;
+        let checkpoint = input.checkpoint();
+        let token = input.next()?;
+        let attribute = match token.value.clone() {
+            Token::Term(s) => {
+                let name = M::new(s, token.span.clone());
+                JoinAttribute::Matching{ name }
+            },
+            Token::DollarTerm(s) => {
+                input.restore(checkpoint);
+                let dollar_term = parse_dollar_term(input)?;
+                if dollar_term.value.as_str() != "left" {
+                    return Err(input.unexpected_token("'left' keyword expected"));
+                }
 
-        let attribute = if input.next_if(Token::DollarTerm(String::from("left"))).is_some() {
-            let left_kwd: Span,
-            let left_name: M<String>,
-            let right_kwd: Span,
-            let right_name: M<String>,
-            JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name };
-        } else if input.next_if(Token::DollarTerm(String::from("right"))).is_some() {
-            let left_kwd: Span,
-            let left_name: M<String>,
-            let right_kwd: Span,
-            let right_name: M<String>,
-            JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name };
-        } else {
-            JoinAttribute::Matching{ name: next_term };
+                let span = dollar_term.span.clone();
+                let dot = input.next()?;
+                if dot.value != Token::Dot {
+                    return Err(input.unexpected_token("Dot expected"));
+                };
+                let left_kwd = span;
+                let left_name = parse_term(input)?;
+
+                let eq = input.next()?;
+                if eq.value != Token::EQ {
+                    return Err(input.unexpected_token("'==' expected"));
+                };
+
+                let dollar_term = parse_dollar_term(input)?;
+                if dollar_term.value.as_str() != "right" {
+                    return Err(input.unexpected_token("'right' keyword expected"));
+                }
+                let right_kwd = dollar_term.span.clone();
+
+                let dot = input.next()?;
+                if dot.value != Token::Dot {
+                    return Err(input.unexpected_token("Dot expected"));
+                };
+
+                let right_name = parse_term(input)?;
+                JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name }
+            },
+            _ => return Err(input.unexpected_token("Term expected")),
         };
 
         attributes.push(attribute);
@@ -314,11 +344,23 @@ mod tests {
 
     use super::*;
     use crate::parser::tests::make_input;
-    use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_summarize_supports_groupings() {
         let source = "NumTransactions=2, Total=foobar by Fruit, StartOfMonth";
+        let result = parse_summarize(&mut make_input(source));
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                println!("{:?}", Report::new(error));
+                panic!();
+            }
+        }
+    }
+
+    #[test]
+    fn parse_join_supports_attributes() {
+        let source = "(Table2) on CommonColumn, $left.Col1 == $right.Col2";
         let result = parse_summarize(&mut make_input(source));
         match result {
             Ok(_) => {}

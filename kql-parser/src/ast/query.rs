@@ -80,7 +80,7 @@ pub enum Columns {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct JoinParams {
-    kind: Option<JoinKind>,
+    pub kind: Option<JoinKind>,
 }
 
 #[allow(dead_code)]
