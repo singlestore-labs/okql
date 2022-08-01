@@ -101,22 +101,6 @@ fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> 
     Err(input.unsupported_error("extend operator"))
 }
 
-fn parse_join_kind(input: &mut ParseInput) -> Result<JoinKind, ParserError> {
-    let term = parse_term(input)?;
-    match term.value.as_str() {
-        "innerunique" => Ok(JoinKind::InnerUnique),
-        "inner" => Ok(JoinKind::Inner),
-        "leftouter" => Ok(JoinKind::LeftOuter),
-        "rightouter" => Ok(JoinKind::RightOuter),
-        "fullouter" => Ok(JoinKind::FullOuter),
-        "leftanti" => Ok(JoinKind::LeftAnti),
-        "rightanti" => Ok(JoinKind::RightAnti),
-        "leftsemi" => Ok(JoinKind::LeftSemi),
-        "rightsemi" => Ok(JoinKind::RightSemi),
-        _ => return Err(input.unexpected_token("Expected join parameter or '(table_name)'")),
-    }
-}
-
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let checkpoint = input.checkpoint();
 
@@ -145,49 +129,7 @@ fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     let mut attributes = Vec::new();
 
     loop {
-        let checkpoint = input.checkpoint();
-        let token = input.next()?;
-        let attribute = match token.value.clone() {
-            Token::Term(s) => {
-                let name = M::new(s, token.span.clone());
-                JoinAttribute::Matching{ name }
-            },
-            Token::DollarTerm(s) => {
-                input.restore(checkpoint);
-                let dollar_term = parse_dollar_term(input)?;
-                if dollar_term.value.as_str() != "left" {
-                    return Err(input.unexpected_token("'left' keyword expected"));
-                }
-
-                let span = dollar_term.span.clone();
-                let dot = input.next()?;
-                if dot.value != Token::Dot {
-                    return Err(input.unexpected_token("Dot expected"));
-                };
-                let left_kwd = span;
-                let left_name = parse_term(input)?;
-
-                let eq = input.next()?;
-                if eq.value != Token::EQ {
-                    return Err(input.unexpected_token("'==' expected"));
-                };
-
-                let dollar_term = parse_dollar_term(input)?;
-                if dollar_term.value.as_str() != "right" {
-                    return Err(input.unexpected_token("'right' keyword expected"));
-                }
-                let right_kwd = dollar_term.span.clone();
-
-                let dot = input.next()?;
-                if dot.value != Token::Dot {
-                    return Err(input.unexpected_token("Dot expected"));
-                };
-
-                let right_name = parse_term(input)?;
-                JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name }
-            },
-            _ => return Err(input.unexpected_token("Term expected")),
-        };
+        let attribute = parse_join_attribute(input)?;
 
         attributes.push(attribute);
 
@@ -197,6 +139,69 @@ fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
     };
 
     Ok(TabularOperator::Join { params, right_table, attributes })
+}
+
+fn parse_join_kind(input: &mut ParseInput) -> Result<JoinKind, ParserError> {
+    let term = parse_term(input)?;
+    match term.value.as_str() {
+        "innerunique" => Ok(JoinKind::InnerUnique),
+        "inner" => Ok(JoinKind::Inner),
+        "leftouter" => Ok(JoinKind::LeftOuter),
+        "rightouter" => Ok(JoinKind::RightOuter),
+        "fullouter" => Ok(JoinKind::FullOuter),
+        "leftanti" => Ok(JoinKind::LeftAnti),
+        "rightanti" => Ok(JoinKind::RightAnti),
+        "leftsemi" => Ok(JoinKind::LeftSemi),
+        "rightsemi" => Ok(JoinKind::RightSemi),
+        _ => return Err(input.unexpected_token("Expected join parameter or '(table_name)'")),
+    }
+}
+
+fn parse_join_attribute(input: &mut ParseInput) -> Result<JoinAttribute, ParserError> {
+    let checkpoint = input.checkpoint();
+    let token = input.next()?;
+    let attribute = match token.value.clone() {
+        Token::Term(s) => {
+            let name = M::new(s, token.span.clone());
+            JoinAttribute::Matching{ name }
+        },
+        Token::DollarTerm(_s) => {
+            input.restore(checkpoint);
+            let dollar_term = parse_dollar_term(input)?;
+            if dollar_term.value.as_str() != "left" {
+                return Err(input.unexpected_token("'left' keyword expected"));
+            }
+
+            let span = dollar_term.span.clone();
+            let dot = input.next()?;
+            if dot.value != Token::Dot {
+                return Err(input.unexpected_token("Dot expected"));
+            };
+            let left_kwd = span;
+            let left_name = parse_term(input)?;
+
+            let eq = input.next()?;
+            if eq.value != Token::EQ {
+                return Err(input.unexpected_token("'==' expected"));
+            };
+
+            let dollar_term = parse_dollar_term(input)?;
+            if dollar_term.value.as_str() != "right" {
+                return Err(input.unexpected_token("'right' keyword expected"));
+            }
+            let right_kwd = dollar_term.span.clone();
+
+            let dot = input.next()?;
+            if dot.value != Token::Dot {
+                return Err(input.unexpected_token("Dot expected"));
+            };
+
+            let right_name = parse_term(input)?;
+            JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name }
+        },
+        _ => return Err(input.unexpected_token("Term expected")),
+    };
+    Ok(attribute)
 }
 
 fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
