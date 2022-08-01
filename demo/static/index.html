@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="favicon-32x32.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="header">
+    <h1>Kusto Query Language (KQL) to SingleStoreDB SQL</h1>
+    <p>This demonstrates how <a href="https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/">KQL</a> queries
+      are parsed and translated to <a href="https://www.singlestore.com/cloud-trial/">SingleStoreDB</a> SQL queries.</p>
+  </div>
+  <div class='demo'>
+    <div class='area'>
+      <h2>Input <code>*.kql</code></h2>
+      <div class='editor' id='input'>
+        <textarea id='input-raw'>StormEvents
+| where StartTime > now
+| where EventType == "Flood" and State == "CALIFORNIA"
+| project StartTime, EndTime, State, EventType, EpisodeNarrative</textarea>
+      </div>
+    </div>
+    <div class='area'>
+      <h2>Output <code>*.sql</code></h2>
+      <div class='editor' id='output'>
+        <textarea id='output-raw' readonly></textarea>
+      </div>
+      <div id='html-output'></div>
+    </div>
+  </div>
+  <div class="footer">
+    <p><i>This editor is powered by Wasm</i></p>
+  </div>
+</body>
+<script src='main.js' type=module></script>
+
+</html>

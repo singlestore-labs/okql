@@ -49,6 +49,9 @@ impl Printer {
         if let Some(order) = &select_stmt.order_by {
             self.print_order_by(&order)?;
         }
+        if let Some(limit) = &select_stmt.limit {
+            self.print_limit(*limit)?;
+        }
         Ok(())
     }
 
@@ -59,17 +62,19 @@ impl Printer {
     ) -> FResult {
         self.start_line();
         match modifier {
-            Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT ")?,
-            Some(ast::Modifier::All) => write!(self.output, "SELECT ALL ")?,
-            None => write!(self.output, "SELECT ")?,
+            Some(ast::Modifier::Distinct) => write!(self.output, "SELECT DISTINCT")?,
+            Some(ast::Modifier::All) => write!(self.output, "SELECT ALL")?,
+            None => write!(self.output, "SELECT")?,
         };
         let mut first = true;
         if select.wildcard {
-            write!(self.output, "* ")?;
+            write!(self.output, " *")?;
             first = false;
         }
         for field in select.columns.iter() {
-            if !first {
+            if first {
+                write!(self.output, " ")?;
+            } else {
                 write!(self.output, ", ")?;
             }
             self.print_val_expr(&field.value)?;
@@ -118,6 +123,13 @@ impl Printer {
         todo!()
     }
 
+    fn print_limit(&mut self, limit: i64) -> FResult {
+        self.start_line();
+        write!(self.output, "LIMIT {}", limit)?;
+        self.end_line();
+        Ok(())
+    }
+
     fn print_val_expr(&mut self, expr: &ast::ValueExpression) -> FResult {
         match expr {
             ast::ValueExpression::Column { name } => write!(self.output, "{}", name),
@@ -144,7 +156,7 @@ impl Printer {
                 ast::Literal::Bool(v) => write!(self.output, "{}", v),
                 ast::Literal::Integer(v) => write!(self.output, "{}", v),
                 ast::Literal::Real(v) => write!(self.output, "{}", v),
-                ast::Literal::String(v) => write!(self.output, "{}", v),
+                ast::Literal::String(v) => write!(self.output, "\"{}\"", v),
             },
         }
     }
@@ -193,6 +205,7 @@ mod tests {
             },
             where_: None,
             order_by: None,
+            limit: None,
         };
 
         let mut printer = Printer::default();

@@ -6,6 +6,7 @@ pub struct SelectStatement {
     pub from: TableReference,
     pub where_: Option<Box<SearchCondition>>,
     pub order_by: Option<OrderByClause>,
+    pub limit: Option<i64>,
 }
 
 impl SelectStatement {
@@ -19,6 +20,7 @@ impl SelectStatement {
             from: TableReference::TableName { name: table },
             where_: None,
             order_by: None,
+            limit: None,
         }
     }
 
@@ -34,6 +36,7 @@ impl SelectStatement {
             },
             where_: None,
             order_by: None,
+            limit: None,
         }
     }
 }

@@ -16,7 +16,12 @@ use self::query::parse_query;
 pub enum ParserError {
     #[diagnostic()]
     #[error("End of input reached")]
-    EndOfInput,
+    EndOfInput {
+        #[source_code]
+        src: Arc<NamedSource>,
+        #[label("Here")]
+        span: Span,
+    },
     #[diagnostic()]
     #[error("Failed to parse: {message}")]
     General {
@@ -118,13 +123,28 @@ impl ParseInput {
     }
 
     pub fn peek(&mut self) -> Result<&M<Token>, ParserError> {
-        self.tokens.get(self.index).ok_or(ParserError::EndOfInput)
+        self.tokens.get(self.index).ok_or(ParserError::EndOfInput {
+            src: self.src.clone(),
+            span: self.end_span(),
+        })
     }
 
     pub fn next(&mut self) -> Result<&M<Token>, ParserError> {
         let result = self.tokens.get(self.index);
         self.index += 1;
-        result.ok_or(ParserError::EndOfInput)
+        result.ok_or(ParserError::EndOfInput {
+            src: self.src.clone(),
+            span: self.end_span(),
+        })
+    }
+
+    fn end_span(&self) -> Span {
+        let offset = if let Some(token) = self.tokens.last() {
+            token.span.offset() + token.span.len()
+        } else {
+            0
+        };
+        Span::from((offset, 0))
     }
 
     pub fn assert_next(&mut self, token: Token, description: &str) -> Result<Span, ParserError> {

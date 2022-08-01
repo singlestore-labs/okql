@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-miette = { version = "3.3.0", features = ["fancy"] }
+miette = { version = "3.3.0" }
 thiserror = "1.0.30"
 kql-parser = { path = "../kql-parser" }
 sql-emitter = { path = "../sql-emitter" }

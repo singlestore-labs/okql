@@ -98,7 +98,15 @@ fn parse_columns(input: &mut ParseInput) -> Result<ast::query::Columns, ParserEr
 }
 
 fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("extend operator"))
+    let mut columns = Vec::new();
+
+    columns.push(parse_column_definition(input)?);
+
+    while input.next_if(Token::Comma).is_some() {
+        columns.push(parse_column_definition(input)?);
+    }
+
+    Ok(TabularOperator::Extend { columns })
 }
 
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {

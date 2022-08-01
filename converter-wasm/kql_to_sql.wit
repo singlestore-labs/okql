@@ -1,0 +1,1 @@
+convert: func(kql: string) -> expected<string, string>

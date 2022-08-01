@@ -25,7 +25,7 @@ pub enum TabularOperator {
     },
     Extend {
         /// New columns to define
-        columns: Vec<(M<String>, MBox<Expression>)>,
+        columns: Vec<ColumnDefinition>,
     },
     Join {
         /// The join parameters
