@@ -1,5 +1,5 @@
 use crate::ast::query::{NullsPosition, Query, SortOrder, TabularOperator};
-use crate::ast::{self, ColumnDefinition, Sorting};
+use crate::ast::{self, ColumnDefinition, Sorting, JoinParams, JoinKind, JoinAttribute};
 
 use crate::lexer::Token;
 use crate::spans::{join_spans, span_precedes_span, M};
@@ -7,6 +7,7 @@ use crate::spans::{join_spans, span_precedes_span, M};
 use crate::parser::{parse_term, ParseInput, ParserError};
 
 use super::expression::parse_expression;
+use super::parse_dollar_term;
 
 pub fn parse_query(input: &mut ParseInput) -> Result<Query, ParserError> {
     let table = parse_term(input)?;
@@ -20,7 +21,7 @@ fn parse_operators(
 ) -> Result<Vec<(M<String>, TabularOperator)>, ParserError> {
     let mut operators = Vec::new();
 
-    while !input.done() {
+    while input.next_if(Token::Pipe).is_some() {
         operators.push(parse_operator(input)?);
     }
 
@@ -28,8 +29,6 @@ fn parse_operators(
 }
 
 fn parse_operator(input: &mut ParseInput) -> Result<(M<String>, TabularOperator), ParserError> {
-    input.assert_next(Token::Pipe, "Tabular operators begin with pipe")?;
-
     let operator_name = parse_kebab_term(input)?;
 
     let operator = match operator_name.value.as_str() {
@@ -111,7 +110,106 @@ fn parse_extend(input: &mut ParseInput) -> Result<TabularOperator, ParserError> 
 }
 
 fn parse_join(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
-    Err(input.unsupported_error("join operator"))
+    let checkpoint = input.checkpoint();
+
+    let kind = if input.next_if(Token::LParen).is_some() {
+        input.restore(checkpoint);
+        None
+    } else {
+        Some(parse_join_kind(input)?)
+    };
+        
+    let params = JoinParams { kind };
+
+    let lparen = input.next()?;
+    if lparen.value != Token::LParen {
+        return Err(input.unexpected_token("Expected left paranthesis before table name"));
+    };
+
+    let table_query = parse_query(input)?;
+    let right_table = Box::new(table_query);
+
+    let rparen = input.next()?;
+    if rparen.value != Token::RParen {
+        return Err(input.unexpected_token("Expected right paranthesis after table name"));
+    };
+
+    let mut attributes = Vec::new();
+
+    loop {
+        let attribute = parse_join_attribute(input)?;
+
+        attributes.push(attribute);
+
+        if input.next_if(Token::Comma).is_none() {
+            break;
+        }
+    };
+
+    Ok(TabularOperator::Join { params, right_table, attributes })
+}
+
+fn parse_join_kind(input: &mut ParseInput) -> Result<JoinKind, ParserError> {
+    let term = parse_term(input)?;
+    match term.value.as_str() {
+        "innerunique" => Ok(JoinKind::InnerUnique),
+        "inner" => Ok(JoinKind::Inner),
+        "leftouter" => Ok(JoinKind::LeftOuter),
+        "rightouter" => Ok(JoinKind::RightOuter),
+        "fullouter" => Ok(JoinKind::FullOuter),
+        "leftanti" => Ok(JoinKind::LeftAnti),
+        "rightanti" => Ok(JoinKind::RightAnti),
+        "leftsemi" => Ok(JoinKind::LeftSemi),
+        "rightsemi" => Ok(JoinKind::RightSemi),
+        _ => return Err(input.unexpected_token("Expected join parameter or '(table_name)'")),
+    }
+}
+
+fn parse_join_attribute(input: &mut ParseInput) -> Result<JoinAttribute, ParserError> {
+    let checkpoint = input.checkpoint();
+    let token = input.next()?;
+    let attribute = match token.value.clone() {
+        Token::Term(s) => {
+            let name = M::new(s, token.span.clone());
+            JoinAttribute::Matching{ name }
+        },
+        Token::DollarTerm(_s) => {
+            input.restore(checkpoint);
+            let dollar_term = parse_dollar_term(input)?;
+            if dollar_term.value.as_str() != "left" {
+                return Err(input.unexpected_token("'left' keyword expected"));
+            }
+
+            let span = dollar_term.span.clone();
+            let dot = input.next()?;
+            if dot.value != Token::Dot {
+                return Err(input.unexpected_token("Dot expected"));
+            };
+            let left_kwd = span;
+            let left_name = parse_term(input)?;
+
+            let eq = input.next()?;
+            if eq.value != Token::EQ {
+                return Err(input.unexpected_token("'==' expected"));
+            };
+
+            let dollar_term = parse_dollar_term(input)?;
+            if dollar_term.value.as_str() != "right" {
+                return Err(input.unexpected_token("'right' keyword expected"));
+            }
+            let right_kwd = dollar_term.span.clone();
+
+            let dot = input.next()?;
+            if dot.value != Token::Dot {
+                return Err(input.unexpected_token("Dot expected"));
+            };
+
+            let right_name = parse_term(input)?;
+            JoinAttribute::NonMatching { left_kwd, left_name, right_kwd, right_name }
+        },
+        _ => return Err(input.unexpected_token("Term expected")),
+    };
+    Ok(attribute)
 }
 
 fn parse_limit(input: &mut ParseInput) -> Result<TabularOperator, ParserError> {
@@ -261,7 +359,6 @@ mod tests {
 
     use super::*;
     use crate::parser::tests::make_input;
-    use pretty_assertions::assert_eq;
 
     #[test]
     fn parse_summarize_supports_groupings() {
@@ -277,9 +374,22 @@ mod tests {
     }
 
     #[test]
-    fn parse_extend_supports_multiple_columns() {
-        let source = "Duration = CreatedOn - CompletedOn, Age = now - CreatedOn, IsSevere = Level == 'Critical' or Level == 'Error'";
-        let result = parse_extend(&mut make_input(source));
+    fn parse_join_supports_attributes() {
+        let source = "(Table2) on CommonColumn, $left.Col1 == $right.Col2";
+        let result = parse_join(&mut make_input(source));
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                println!("{:?}", Report::new(error));
+                panic!();
+            }
+        }
+    }
+
+    #[test]
+    fn parse_join_supports_kind() {
+        let source = "rightouter (Table) on $left.Col1 == $right.Col2";
+        let result = parse_join(&mut make_input(source));
         match result {
             Ok(_) => {}
             Err(error) => {
